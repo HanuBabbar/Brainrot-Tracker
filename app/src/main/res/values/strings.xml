@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Brainrot Tracker</string>
+    <string name="accessibility_service_description">Tracks your scrolling in short-form video apps to help you manage screen time.</string>
 </resources>
