@@ -5,9 +5,18 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.example.brainrottracker.data.local.AppDatabase
+import com.example.brainrottracker.data.repository.UsageRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class BrainrotTrackerService : AccessibilityService() {
 
+    // Scope for background database operations
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private lateinit var repository: UsageRepository
     private var lastShortTitle: String? = null
     private var lastReelAuthor: String? = null
     private var lastTreeCheckTime = 0L
@@ -77,6 +86,9 @@ class BrainrotTrackerService : AccessibilityService() {
         if (title != null && title != lastShortTitle) {
             if (lastShortTitle != null) {
                 Log.d("BrainrotTracker", "🔥 SWIPED YouTube Short: $title")
+                serviceScope.launch {
+                    repository.incrementUsage("YouTube")
+                }
             }
             lastShortTitle = title
         }
@@ -128,6 +140,9 @@ class BrainrotTrackerService : AccessibilityService() {
         if (currentAuthor != null && currentAuthor != lastReelAuthor) {
             if (lastReelAuthor != null) {
                 Log.d("BrainrotTracker", "🎬 SWIPED Instagram Reel by: $currentAuthor")
+                serviceScope.launch {
+                    repository.incrementUsage("Instagram")
+                }
             }
             lastReelAuthor = currentAuthor
         }
@@ -258,6 +273,12 @@ class BrainrotTrackerService : AccessibilityService() {
     override fun onInterrupt() {}
 
     override fun onServiceConnected() {
-        Log.d("BrainrotTracker", "Service Connected and ready!")
+        super.onServiceConnected()
+
+        // Setup database and repository
+        val database = AppDatabase.getDatabase(this)
+        repository = UsageRepository(database.usageDao())
+
+        Log.d("BrainrotTracker", "Service Connected and Database Ready!")
     }
 }
