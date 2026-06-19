@@ -10,6 +10,8 @@ kotlin = "2.2.10"
 composeBom = "2026.02.01"
 room = "2.8.4"
 ksp = "2.2.10-2.0.2"
+datastoreCore = "1.2.1"
+datastorePreferences = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +31,8 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-datastore-core = { group = "androidx.datastore", name = "datastore-core", version.ref = "datastoreCore" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
