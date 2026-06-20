@@ -1,7 +1,10 @@
 package com.example.brainrottracker.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.ComponentName
+import android.content.Context
 import android.graphics.Rect
+import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -28,6 +31,19 @@ class BrainrotTrackerService : AccessibilityService() {
         "likes", "comments", "share", "remix", "all", "gaming",
         "hyped", "podcasts", "music", "mixes", "live"
     )
+
+    companion object {
+        // Helper to check if the service is enabled
+        fun isServiceEnabled(context: Context): Boolean {
+            val expectedComponentName = ComponentName(context, BrainrotTrackerService::class.java)
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+
+            return enabledServices.contains(expectedComponentName.flattenToString())
+        }
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return

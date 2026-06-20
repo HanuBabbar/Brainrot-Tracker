@@ -9,19 +9,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.brainrottracker.ui.theme.BrainrotTrackerTheme
-
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.brainrottracker.data.local.AppDatabase
 import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.data.preferences.UserSettings
 import com.example.brainrottracker.data.repository.UsageRepository
+import com.example.brainrottracker.service.BrainrotTrackerService
 import com.example.brainrottracker.ui.AppViewModel
 import com.example.brainrottracker.ui.Screen
+import com.example.brainrottracker.ui.components.PermissionScreen
 import com.example.brainrottracker.ui.dashboard.DashboardScreen
 import com.example.brainrottracker.ui.dashboard.DashboardViewModel
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageScreen
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageViewModel
+import com.example.brainrottracker.ui.theme.BrainrotTrackerTheme
 
 
 class MainActivity : ComponentActivity() {
@@ -47,12 +52,32 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppRoot(
-    appViewModel: AppViewModel, 
+    appViewModel: AppViewModel,
     dashboardViewModel: DashboardViewModel,
     weeklyUsageViewModel: WeeklyUsageViewModel
 ) {
+    val context = LocalContext.current
     val authMode by appViewModel.authMode.collectAsState()
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
+
+    // Live check for accessibility permission
+    var isPermissionGranted by remember {
+        mutableStateOf(BrainrotTrackerService.isServiceEnabled(context))
+    }
+
+    // Observe lifecycle to re-check permission when user returns from settings
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isPermissionGranted = BrainrotTrackerService.isServiceEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     when (authMode) {
         AuthMode.UNKNOWN -> AuthChoiceScreen(
@@ -60,19 +85,23 @@ fun AppRoot(
             onLogIn = { /* Coming Soon */ }
         )
         AuthMode.OFFLINE, AuthMode.LOGGED_IN -> {
-            when (currentScreen) {
-                is Screen.Dashboard -> {
-                    DashboardScreen(
-                        viewModel = dashboardViewModel,
-                        appViewModel = appViewModel,
-                        onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage }
-                    )
-                }
-                is Screen.WeeklyUsage -> {
-                    WeeklyUsageScreen(
-                        viewModel = weeklyUsageViewModel,
-                        onNavigateBack = { currentScreen = Screen.Dashboard }
-                    )
+            if (!isPermissionGranted) {
+                PermissionScreen()
+            } else {
+                when (currentScreen) {
+                    is Screen.Dashboard -> {
+                        DashboardScreen(
+                            viewModel = dashboardViewModel,
+                            appViewModel = appViewModel,
+                            onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage }
+                        )
+                    }
+                    is Screen.WeeklyUsage -> {
+                        WeeklyUsageScreen(
+                            viewModel = weeklyUsageViewModel,
+                            onNavigateBack = { currentScreen = Screen.Dashboard }
+                        )
+                    }
                 }
             }
         }
@@ -94,7 +123,7 @@ fun AuthChoiceScreen(onContinueOffline: () -> Unit, onLogIn: () -> Unit) {
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary
             )
-            
+
             Text(
                 text = "Stop swiping, start living.",
                 style = MaterialTheme.typography.bodyLarge,
@@ -107,9 +136,9 @@ fun AuthChoiceScreen(onContinueOffline: () -> Unit, onLogIn: () -> Unit) {
             ) {
                 Text("Use Locally (No Login)")
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             OutlinedButton(
                 onClick = onLogIn,
                 modifier = Modifier.fillMaxWidth()
