@@ -1,6 +1,7 @@
 package com.example.brainrottracker
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -16,8 +17,11 @@ import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.data.preferences.UserSettings
 import com.example.brainrottracker.data.repository.UsageRepository
 import com.example.brainrottracker.ui.AppViewModel
+import com.example.brainrottracker.ui.Screen
 import com.example.brainrottracker.ui.dashboard.DashboardScreen
 import com.example.brainrottracker.ui.dashboard.DashboardViewModel
+import com.example.brainrottracker.ui.dashboard.WeeklyUsageScreen
+import com.example.brainrottracker.ui.dashboard.WeeklyUsageViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -31,18 +35,24 @@ class MainActivity : ComponentActivity() {
         val database = AppDatabase.getDatabase(this)
         val repository = UsageRepository(database.usageDao())
         val dashboardViewModel = DashboardViewModel(repository)
+        val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
 
         setContent {
             BrainrotTrackerTheme {
-                AppRoot(appViewModel, dashboardViewModel)
+                AppRoot(appViewModel, dashboardViewModel, weeklyUsageViewModel)
             }
         }
     }
 }
 
 @Composable
-fun AppRoot(appViewModel: AppViewModel, dashboardViewModel: DashboardViewModel) {
+fun AppRoot(
+    appViewModel: AppViewModel, 
+    dashboardViewModel: DashboardViewModel,
+    weeklyUsageViewModel: WeeklyUsageViewModel
+) {
     val authMode by appViewModel.authMode.collectAsState()
+    var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
 
     when (authMode) {
         AuthMode.UNKNOWN -> AuthChoiceScreen(
@@ -50,7 +60,21 @@ fun AppRoot(appViewModel: AppViewModel, dashboardViewModel: DashboardViewModel) 
             onLogIn = { /* Coming Soon */ }
         )
         AuthMode.OFFLINE, AuthMode.LOGGED_IN -> {
-            DashboardScreen(viewModel = dashboardViewModel)
+            when (currentScreen) {
+                is Screen.Dashboard -> {
+                    DashboardScreen(
+                        viewModel = dashboardViewModel,
+                        appViewModel = appViewModel,
+                        onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage }
+                    )
+                }
+                is Screen.WeeklyUsage -> {
+                    WeeklyUsageScreen(
+                        viewModel = weeklyUsageViewModel,
+                        onNavigateBack = { currentScreen = Screen.Dashboard }
+                    )
+                }
+            }
         }
     }
 }
