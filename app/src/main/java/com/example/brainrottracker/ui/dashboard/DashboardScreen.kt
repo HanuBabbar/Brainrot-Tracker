@@ -18,7 +18,8 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     appViewModel: AppViewModel,
-    onNavigateToWeekly: () -> Unit
+    onNavigateToWeekly: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val stats by viewModel.todayStats.collectAsState()
     val authMode by appViewModel.authMode.collectAsState()
@@ -47,6 +48,16 @@ fun DashboardScreen(
                     onClick = {
                         scope.launch { drawerState.close() }
                         onNavigateToWeekly()
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Settings") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToSettings()
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )

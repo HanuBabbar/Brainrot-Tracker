@@ -3,7 +3,9 @@ package com.example.brainrottracker
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,7 +28,10 @@ import com.example.brainrottracker.ui.dashboard.DashboardScreen
 import com.example.brainrottracker.ui.dashboard.DashboardViewModel
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageScreen
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageViewModel
+import com.example.brainrottracker.ui.settings.SettingsScreen
+import com.example.brainrottracker.ui.settings.SettingsViewModel
 import com.example.brainrottracker.ui.theme.BrainrotTrackerTheme
+import com.example.brainrottracker.util.NotificationHelper
 
 
 class MainActivity : ComponentActivity() {
@@ -38,13 +43,15 @@ class MainActivity : ComponentActivity() {
 
         // 1. Initialize data layer manually for now
         val database = AppDatabase.getDatabase(this)
-        val repository = UsageRepository(database.usageDao())
+        val notificationHelper = NotificationHelper(this)
+        val repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
         val dashboardViewModel = DashboardViewModel(repository)
         val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
+        val settingsViewModel = SettingsViewModel(userSettings, notificationHelper)
 
         setContent {
             BrainrotTrackerTheme {
-                AppRoot(appViewModel, dashboardViewModel, weeklyUsageViewModel)
+                AppRoot(appViewModel, dashboardViewModel, weeklyUsageViewModel, settingsViewModel)
             }
         }
     }
@@ -54,11 +61,26 @@ class MainActivity : ComponentActivity() {
 fun AppRoot(
     appViewModel: AppViewModel,
     dashboardViewModel: DashboardViewModel,
-    weeklyUsageViewModel: WeeklyUsageViewModel
+    weeklyUsageViewModel: WeeklyUsageViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     val context = LocalContext.current
     val authMode by appViewModel.authMode.collectAsState()
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
+
+    // Request Notification Permission for Android 13+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            Log.d("BrainrotTracker", "Notification permission granted: $isGranted")
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     // Live check for accessibility permission
     var isPermissionGranted by remember {
@@ -91,17 +113,24 @@ fun AppRoot(
                 when (currentScreen) {
                     is Screen.Dashboard -> {
                         DashboardScreen(
-                            viewModel = dashboardViewModel,
-                            appViewModel = appViewModel,
-                            onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage }
-                        )
-                    }
-                    is Screen.WeeklyUsage -> {
-                        WeeklyUsageScreen(
-                            viewModel = weeklyUsageViewModel,
-                            onNavigateBack = { currentScreen = Screen.Dashboard }
-                        )
-                    }
+                        viewModel = dashboardViewModel,
+                        appViewModel = appViewModel,
+                        onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage },
+                        onNavigateToSettings = { currentScreen = Screen.Settings }
+                    )
+                }
+                is Screen.WeeklyUsage -> {
+                    WeeklyUsageScreen(
+                        viewModel = weeklyUsageViewModel,
+                        onNavigateBack = { currentScreen = Screen.Dashboard }
+                    )
+                }
+                is Screen.Settings -> {
+                    SettingsScreen(
+                        viewModel = settingsViewModel,
+                        onNavigateBack = { currentScreen = Screen.Dashboard }
+                    )
+                }
                 }
             }
         }
