@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
         val repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
         val dashboardViewModel = DashboardViewModel(repository)
         val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
-        val settingsViewModel = SettingsViewModel(userSettings, notificationHelper)
+        val settingsViewModel = SettingsViewModel(userSettings)
 
         setContent {
             BrainrotTrackerTheme {

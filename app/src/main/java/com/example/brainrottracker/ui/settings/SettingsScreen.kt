@@ -109,17 +109,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
-            HorizontalDivider()
-
-            // Test Notification Button
-            Button(
-                onClick = { viewModel.triggerTestNotification() },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-            ) {
-                Text("Send Test Notification")
-            }
         }
     }
 }

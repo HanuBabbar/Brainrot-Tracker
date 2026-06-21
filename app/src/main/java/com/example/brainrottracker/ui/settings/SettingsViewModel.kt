@@ -4,15 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.brainrottracker.data.preferences.CPUMode
 import com.example.brainrottracker.data.preferences.UserSettings
-import com.example.brainrottracker.util.NotificationHelper
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
-    private val userSettings: UserSettings,
-    private val notificationHelper: NotificationHelper
+    private val userSettings: UserSettings
 ) : ViewModel() {
 
     val dailyLimit: StateFlow<Int> = userSettings.dailyLimit
@@ -31,9 +29,5 @@ class SettingsViewModel(
         viewModelScope.launch {
             userSettings.setCPUMode(mode)
         }
-    }
-    
-    fun triggerTestNotification() {
-        notificationHelper.sendLimitReachedNotification(dailyLimit.value)
     }
 }
