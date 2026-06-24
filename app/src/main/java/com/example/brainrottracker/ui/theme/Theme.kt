@@ -1,58 +1,77 @@
 package com.example.brainrottracker.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+val LocalThemeIsDark = compositionLocalOf { true }
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+object AppTheme {
+    val isDark: Boolean
+        @Composable
+        get() = LocalThemeIsDark.current
+}
 
 @Composable
 fun BrainrotTrackerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val colorScheme = if (darkTheme) {
+        darkColorScheme(
+            primary            = PrimaryPurple,
+            onPrimary          = Color.White,
+            primaryContainer   = Color(0xFF6D28D9),
+            onPrimaryContainer = RawForegroundDark,
+            secondary          = RawSecondaryDark,
+            onSecondary        = RawVioletDark,
+            secondaryContainer = RawMutedDark,
+            onSecondaryContainer = RawForegroundDark,
+            tertiary           = AccentPurple,
+            onTertiary         = Color.White,
+            background         = RawBackgroundDark,
+            onBackground       = RawForegroundDark,
+            surface            = RawCardDark,
+            onSurface          = RawForegroundDark,
+            surfaceVariant     = RawMutedDark,
+            onSurfaceVariant   = RawMutedFgDark,
+            outline            = RawBorderStrDark,
+            error              = Color(0xFFF87171),
+            onError            = Color.White,
+        )
+    } else {
+        lightColorScheme(
+            primary            = PrimaryPurple,
+            onPrimary          = Color.White,
+            primaryContainer   = Color(0xFFDDD2FF),
+            onPrimaryContainer = RawForegroundLight,
+            secondary          = RawSecondaryLight,
+            onSecondary        = RawVioletLight,
+            secondaryContainer = RawMutedLight,
+            onSecondaryContainer = RawForegroundLight,
+            tertiary           = AccentPurple,
+            onTertiary         = Color.White,
+            background         = RawBackgroundLight,
+            onBackground       = RawForegroundLight,
+            surface            = RawCardLight,
+            onSurface          = RawForegroundLight,
+            surfaceVariant     = RawMutedLight,
+            onSurfaceVariant   = RawMutedFgLight,
+            outline            = RawBorderStrLight,
+            error              = Color(0xFFDC2626),
+            onError            = Color.White,
+        )
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalThemeIsDark provides darkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography  = Typography,
+            content     = content
+        )
+    }
 }

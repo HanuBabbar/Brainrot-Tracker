@@ -6,52 +6,70 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.example.brainrottracker.data.local.AppDatabase
 import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.data.preferences.UserSettings
 import com.example.brainrottracker.data.repository.UsageRepository
 import com.example.brainrottracker.service.BrainrotTrackerService
 import com.example.brainrottracker.ui.AppViewModel
-import com.example.brainrottracker.ui.Screen
+import com.example.brainrottracker.ui.MainShell
+import com.example.brainrottracker.ui.components.GradientButton
 import com.example.brainrottracker.ui.components.PermissionScreen
-import com.example.brainrottracker.ui.dashboard.DashboardScreen
 import com.example.brainrottracker.ui.dashboard.DashboardViewModel
-import com.example.brainrottracker.ui.dashboard.WeeklyUsageScreen
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageViewModel
-import com.example.brainrottracker.ui.settings.SettingsScreen
-import com.example.brainrottracker.ui.settings.SettingsViewModel
-import com.example.brainrottracker.ui.theme.BrainrotTrackerTheme
+import com.example.brainrottracker.ui.theme.*
 import com.example.brainrottracker.util.NotificationHelper
-
+import com.example.brainrottracker.R
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val userSettings = UserSettings(this)
-        val appViewModel = AppViewModel(userSettings)
+        // Enable immersive full-screen mode (transient hide of status & navigation bars)
+        val window = this.window
+        val view = window.decorView
+        val insetsController = WindowCompat.getInsetsController(window, view)
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-        // 1. Initialize data layer manually for now
+        val userSettings = UserSettings(this)
         val database = AppDatabase.getDatabase(this)
         val notificationHelper = NotificationHelper(this)
         val repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
+
+        val appViewModel = AppViewModel(application, userSettings, repository)
         val dashboardViewModel = DashboardViewModel(repository)
         val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
-        val settingsViewModel = SettingsViewModel(userSettings)
 
         setContent {
-            BrainrotTrackerTheme {
-                AppRoot(appViewModel, dashboardViewModel, weeklyUsageViewModel, settingsViewModel)
+            val darkMode by appViewModel.darkMode.collectAsState()
+            BrainrotTrackerTheme(darkTheme = darkMode) {
+                AppRoot(appViewModel, dashboardViewModel, weeklyUsageViewModel)
             }
         }
     }
@@ -61,12 +79,10 @@ class MainActivity : ComponentActivity() {
 fun AppRoot(
     appViewModel: AppViewModel,
     dashboardViewModel: DashboardViewModel,
-    weeklyUsageViewModel: WeeklyUsageViewModel,
-    settingsViewModel: SettingsViewModel
+    weeklyUsageViewModel: WeeklyUsageViewModel
 ) {
     val context = LocalContext.current
     val authMode by appViewModel.authMode.collectAsState()
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
 
     // Request Notification Permission for Android 13+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -87,7 +103,6 @@ fun AppRoot(
         mutableStateOf(BrainrotTrackerService.isServiceEnabled(context))
     }
 
-    // Observe lifecycle to re-check permission when user returns from settings
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -110,28 +125,11 @@ fun AppRoot(
             if (!isPermissionGranted) {
                 PermissionScreen()
             } else {
-                when (currentScreen) {
-                    is Screen.Dashboard -> {
-                        DashboardScreen(
-                        viewModel = dashboardViewModel,
-                        appViewModel = appViewModel,
-                        onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage },
-                        onNavigateToSettings = { currentScreen = Screen.Settings }
-                    )
-                }
-                is Screen.WeeklyUsage -> {
-                    WeeklyUsageScreen(
-                        viewModel = weeklyUsageViewModel,
-                        onNavigateBack = { currentScreen = Screen.Dashboard }
-                    )
-                }
-                is Screen.Settings -> {
-                    SettingsScreen(
-                        viewModel = settingsViewModel,
-                        onNavigateBack = { currentScreen = Screen.Dashboard }
-                    )
-                }
-                }
+                MainShell(
+                    appViewModel = appViewModel,
+                    dashboardViewModel = dashboardViewModel,
+                    weeklyUsageViewModel = weeklyUsageViewModel
+                )
             }
         }
     }
@@ -139,40 +137,72 @@ fun AppRoot(
 
 @Composable
 fun AuthChoiceScreen(onContinueOffline: () -> Unit, onLogIn: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundDark)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Brainrot Tracker",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary
+            Image(
+                painter = painterResource(R.drawable.brain_icon),
+                contentDescription = "Brain Rot mascot",
+                modifier = Modifier.size(180.dp),
+                contentScale = ContentScale.Fit
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "brain",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Black,
+                    color = ForegroundLight
+                )
+                Text(
+                    text = "rot",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Black,
+                    color = LightPurple
+                )
+            }
 
             Text(
                 text = "Stop swiping, start living.",
-                style = MaterialTheme.typography.bodyLarge,
+                fontSize = 14.sp,
+                color = MutedForeground,
                 modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
             )
 
-            Button(
-                onClick = onContinueOffline,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Use Locally (No Login)")
-            }
+            GradientButton(
+                text = "Use Locally (No Login)",
+                onClick = onContinueOffline
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedButton(
-                onClick = onLogIn,
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, BorderPurpleStrong, RoundedCornerShape(16.dp))
+                    .clickable(onClick = onLogIn)
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text("Log In (Sync Data)")
+                Text(
+                    text = "Log In (Sync Data)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = LightPurple
+                )
             }
         }
     }

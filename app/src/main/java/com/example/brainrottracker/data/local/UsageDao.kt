@@ -17,6 +17,9 @@ interface UsageDao {
     @Query("SELECT * FROM usage_stats ORDER BY date DESC LIMIT 14") // 14 to cover 7 days x 2 platforms
     fun getWeeklyUsage(): Flow<List<UsageEntity>>
 
+    @Query("SELECT * FROM usage_stats ORDER BY date DESC")
+    fun getAllUsage(): Flow<List<UsageEntity>>
+
     @Query("SELECT SUM(count) FROM usage_stats WHERE date = :date")
     fun getTotalCountForDate(date: String): Flow<Int?>
 

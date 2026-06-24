@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -20,6 +21,8 @@ class UserSettings(private val context: Context) {
         private val DAILY_LIMIT_KEY = intPreferencesKey("daily_limit")
         private val LAST_NOTIFIED_DATE_KEY = stringPreferencesKey("last_notified_date")
         private val CPU_MODE_KEY = stringPreferencesKey("cpu_mode")
+        private val BREAK_REMINDER_KEY = intPreferencesKey("break_reminder")
+        private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
     }
 
     suspend fun setAuthMode(mode: AuthMode) {
@@ -70,5 +73,25 @@ class UserSettings(private val context: Context) {
         } catch (e: IllegalArgumentException) {
             CPUMode.MEDIUM
         }
+    }
+
+    suspend fun setBreakReminder(minutes: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[BREAK_REMINDER_KEY] = minutes
+        }
+    }
+
+    val breakReminder: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[BREAK_REMINDER_KEY] ?: 20
+    }
+
+    suspend fun setDarkMode(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[DARK_MODE_KEY] = enabled
+        }
+    }
+
+    val darkMode: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[DARK_MODE_KEY] ?: true
     }
 }

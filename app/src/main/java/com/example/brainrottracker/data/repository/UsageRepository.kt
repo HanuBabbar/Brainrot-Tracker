@@ -58,5 +58,7 @@ class UsageRepository(
 
     fun getWeekly(): Flow<List<UsageEntity>> = usageDao.getWeeklyUsage()
 
+    fun getAll(): Flow<List<UsageEntity>> = usageDao.getAllUsage()
+
     fun getTodayTotal(): Flow<Int?> = usageDao.getTotalCountForDate(getTodayDate())
 }
