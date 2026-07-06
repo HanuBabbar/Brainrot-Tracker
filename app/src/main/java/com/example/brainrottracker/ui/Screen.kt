@@ -4,4 +4,5 @@ sealed class Screen {
     object Dashboard : Screen()
     object WeeklyUsage : Screen()
     object Settings : Screen()
+    object Login : Screen()
 }

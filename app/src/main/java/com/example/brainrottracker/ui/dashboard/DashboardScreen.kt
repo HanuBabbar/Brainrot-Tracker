@@ -19,7 +19,8 @@ fun DashboardScreen(
     viewModel: DashboardViewModel,
     appViewModel: AppViewModel,
     onNavigateToWeekly: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val stats by viewModel.todayStats.collectAsState()
     val authMode by appViewModel.authMode.collectAsState()
@@ -31,7 +32,13 @@ fun DashboardScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                SidebarHeader(authMode = authMode)
+                SidebarHeader(
+                    authMode = authMode,
+                    onLoginClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToLogin()
+                    }
+                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -116,7 +123,7 @@ fun DashboardScreen(
 }
 
 @Composable
-fun SidebarHeader(authMode: AuthMode) {
+fun SidebarHeader(authMode: AuthMode, onLoginClick: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
         if (authMode == AuthMode.LOGGED_IN) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -130,7 +137,7 @@ fun SidebarHeader(authMode: AuthMode) {
             }
         } else {
             Button(
-                onClick = { /* Navigate to Login later */ },
+                onClick = onLoginClick,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Log In for Cloud Sync")

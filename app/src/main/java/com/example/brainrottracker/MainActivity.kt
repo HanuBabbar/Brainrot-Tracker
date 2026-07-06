@@ -28,6 +28,8 @@ import com.example.brainrottracker.ui.dashboard.DashboardScreen
 import com.example.brainrottracker.ui.dashboard.DashboardViewModel
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageScreen
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageViewModel
+import com.example.brainrottracker.ui.login.LoginScreen
+import com.example.brainrottracker.ui.login.LoginViewModel
 import com.example.brainrottracker.ui.settings.SettingsScreen
 import com.example.brainrottracker.ui.settings.SettingsViewModel
 import com.example.brainrottracker.ui.theme.BrainrotTrackerTheme
@@ -48,10 +50,17 @@ class MainActivity : ComponentActivity() {
         val dashboardViewModel = DashboardViewModel(repository)
         val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
         val settingsViewModel = SettingsViewModel(userSettings)
+        val loginViewModel = LoginViewModel(userSettings)
 
         setContent {
             BrainrotTrackerTheme {
-                AppRoot(appViewModel, dashboardViewModel, weeklyUsageViewModel, settingsViewModel)
+                AppRoot(
+                    appViewModel = appViewModel,
+                    dashboardViewModel = dashboardViewModel,
+                    weeklyUsageViewModel = weeklyUsageViewModel,
+                    settingsViewModel = settingsViewModel,
+                    loginViewModel = loginViewModel
+                )
             }
         }
     }
@@ -62,7 +71,8 @@ fun AppRoot(
     appViewModel: AppViewModel,
     dashboardViewModel: DashboardViewModel,
     weeklyUsageViewModel: WeeklyUsageViewModel,
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    loginViewModel: LoginViewModel
 ) {
     val context = LocalContext.current
     val authMode by appViewModel.authMode.collectAsState()
@@ -102,10 +112,20 @@ fun AppRoot(
     }
 
     when (authMode) {
-        AuthMode.UNKNOWN -> AuthChoiceScreen(
-            onContinueOffline = { appViewModel.setAuthMode(AuthMode.OFFLINE) },
-            onLogIn = { /* Coming Soon */ }
-        )
+        AuthMode.UNKNOWN -> {
+            if (currentScreen is Screen.Login) {
+                LoginScreen(
+                    viewModel = loginViewModel,
+                    onNavigateBack = { currentScreen = Screen.Dashboard },
+                    onLoginSuccess = { currentScreen = Screen.Dashboard }
+                )
+            } else {
+                AuthChoiceScreen(
+                    onContinueOffline = { appViewModel.setAuthMode(AuthMode.OFFLINE) },
+                    onLogIn = { currentScreen = Screen.Login }
+                )
+            }
+        }
         AuthMode.OFFLINE, AuthMode.LOGGED_IN -> {
             if (!isPermissionGranted) {
                 PermissionScreen()
@@ -113,24 +133,32 @@ fun AppRoot(
                 when (currentScreen) {
                     is Screen.Dashboard -> {
                         DashboardScreen(
-                        viewModel = dashboardViewModel,
-                        appViewModel = appViewModel,
-                        onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage },
-                        onNavigateToSettings = { currentScreen = Screen.Settings }
-                    )
-                }
-                is Screen.WeeklyUsage -> {
-                    WeeklyUsageScreen(
-                        viewModel = weeklyUsageViewModel,
-                        onNavigateBack = { currentScreen = Screen.Dashboard }
-                    )
-                }
-                is Screen.Settings -> {
-                    SettingsScreen(
-                        viewModel = settingsViewModel,
-                        onNavigateBack = { currentScreen = Screen.Dashboard }
-                    )
-                }
+                            viewModel = dashboardViewModel,
+                            appViewModel = appViewModel,
+                            onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage },
+                            onNavigateToSettings = { currentScreen = Screen.Settings },
+                            onNavigateToLogin = { currentScreen = Screen.Login }
+                        )
+                    }
+                    is Screen.WeeklyUsage -> {
+                        WeeklyUsageScreen(
+                            viewModel = weeklyUsageViewModel,
+                            onNavigateBack = { currentScreen = Screen.Dashboard }
+                        )
+                    }
+                    is Screen.Settings -> {
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            onNavigateBack = { currentScreen = Screen.Dashboard }
+                        )
+                    }
+                    is Screen.Login -> {
+                        LoginScreen(
+                            viewModel = loginViewModel,
+                            onNavigateBack = { currentScreen = Screen.Dashboard },
+                            onLoginSuccess = { currentScreen = Screen.Dashboard }
+                        )
+                    }
                 }
             }
         }

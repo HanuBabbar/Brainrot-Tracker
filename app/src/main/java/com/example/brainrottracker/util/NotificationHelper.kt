@@ -9,6 +9,8 @@ import androidx.core.app.NotificationCompat
 
 class NotificationHelper(private val context: Context) {
 
+    fun getContext(): Context = context
+
     companion object {
         private const val CHANNEL_ID = "brainrot_limit_channel"
         private const val NOTIFICATION_ID = 1001

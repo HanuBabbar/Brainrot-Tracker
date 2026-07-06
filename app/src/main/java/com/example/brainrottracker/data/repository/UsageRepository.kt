@@ -3,7 +3,13 @@ package com.example.brainrottracker.data.repository
 import com.example.brainrottracker.data.local.UsageDao
 import com.example.brainrottracker.data.local.UsageEntity
 import com.example.brainrottracker.data.preferences.UserSettings
+import com.example.brainrottracker.data.remote.NetworkClient
+import com.example.brainrottracker.data.remote.SyncRequest
 import com.example.brainrottracker.util.NotificationHelper
+import androidx.glance.appwidget.updateAll
+import com.example.brainrottracker.widget.BrainrotWidget
+import io.ktor.client.request.*
+import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
@@ -36,7 +42,17 @@ class UsageRepository(
             usageDao.upsertUsage(newUsage)
         }
         
+        // Update widgets whenever data changes
+        notificationHelper.getContext().let { context ->
+            BrainrotWidget().updateAll(context)
+        }
+
         checkLimitAndNotify()
+
+        // Sync if logged in
+        if (userSettings.userId.first() != null) {
+            syncData()
+        }
     }
 
     private suspend fun checkLimitAndNotify() {
@@ -59,4 +75,19 @@ class UsageRepository(
     fun getWeekly(): Flow<List<UsageEntity>> = usageDao.getWeeklyUsage()
 
     fun getTodayTotal(): Flow<Int?> = usageDao.getTotalCountForDate(getTodayDate())
+
+    suspend fun syncData() {
+        val userId = userSettings.userId.first() ?: return
+        val stats = usageDao.getWeeklyUsage().first()
+
+        try {
+            val response = NetworkClient.client.post("http://10.0.2.2:3000/api/v1/sync") {
+                contentType(ContentType.Application.Json)
+                setBody(SyncRequest(userId, stats))
+            }
+            android.util.Log.d("UsageRepository", "Sync successful: ${response.status}")
+        } catch (e: Exception) {
+            android.util.Log.e("UsageRepository", "Sync failed", e)
+        }
+    }
 }
