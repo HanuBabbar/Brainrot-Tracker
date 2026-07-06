@@ -18,7 +18,9 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     appViewModel: AppViewModel,
-    onNavigateToWeekly: () -> Unit
+    onNavigateToWeekly: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val stats by viewModel.todayStats.collectAsState()
     val authMode by appViewModel.authMode.collectAsState()
@@ -30,7 +32,13 @@ fun DashboardScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                SidebarHeader(authMode = authMode)
+                SidebarHeader(
+                    authMode = authMode,
+                    onLoginClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToLogin()
+                    }
+                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -47,6 +55,16 @@ fun DashboardScreen(
                     onClick = {
                         scope.launch { drawerState.close() }
                         onNavigateToWeekly()
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Settings") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToSettings()
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -105,7 +123,7 @@ fun DashboardScreen(
 }
 
 @Composable
-fun SidebarHeader(authMode: AuthMode) {
+fun SidebarHeader(authMode: AuthMode, onLoginClick: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
         if (authMode == AuthMode.LOGGED_IN) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -119,7 +137,7 @@ fun SidebarHeader(authMode: AuthMode) {
             }
         } else {
             Button(
-                onClick = { /* Navigate to Login later */ },
+                onClick = onLoginClick,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Log In for Cloud Sync")
