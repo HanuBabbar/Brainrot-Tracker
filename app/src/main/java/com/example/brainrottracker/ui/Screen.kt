@@ -5,4 +5,6 @@ sealed class Screen {
     object WeeklyUsage : Screen()
     object Settings : Screen()
     object Login : Screen()
+    object Friends : Screen()
+    object Leaderboard : Screen()
 }

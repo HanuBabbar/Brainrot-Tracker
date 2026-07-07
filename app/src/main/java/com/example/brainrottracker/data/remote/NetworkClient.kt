@@ -8,8 +8,9 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
 object NetworkClient {
-    // Replace with your PC's local IP address (e.g., "192.168.1.X")
-    private const val BASE_URL = "http://10.0.2.2:3000" // Default for Emulator
+    // ⚠️ Updated to your PC's IP address (192.168.0.114)
+    // Make sure your Bun server is listening on 0.0.0.0
+    const val BASE_URL = "https://brainrot-server-ykrt.onrender.com/api/v1/"
 
     val client = HttpClient(Android) {
         install(ContentNegotiation) {
@@ -20,6 +21,7 @@ object NetworkClient {
             })
         }
         install(Logging) {
+            logger = Logger.DEFAULT
             level = LogLevel.ALL
         }
     }

@@ -20,10 +20,13 @@ fun DashboardScreen(
     appViewModel: AppViewModel,
     onNavigateToWeekly: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onNavigateToFriends: () -> Unit,
+    onNavigateToLeaderboard: () -> Unit,
 ) {
     val stats by viewModel.todayStats.collectAsState()
     val authMode by appViewModel.authMode.collectAsState()
+    val friendCode by appViewModel.friendCode.collectAsState()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -34,6 +37,7 @@ fun DashboardScreen(
             ModalDrawerSheet {
                 SidebarHeader(
                     authMode = authMode,
+                    friendCode = friendCode,
                     onLoginClick = {
                         scope.launch { drawerState.close() }
                         onNavigateToLogin()
@@ -60,6 +64,26 @@ fun DashboardScreen(
                 )
 
                 NavigationDrawerItem(
+                    label = { Text("Friends") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToFriends()
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Leaderboard") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToLeaderboard()
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
                     label = { Text("Settings") },
                     selected = false,
                     onClick = {
@@ -68,6 +92,20 @@ fun DashboardScreen(
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
+
+                if (authMode != AuthMode.UNKNOWN) {
+                    NavigationDrawerItem(
+                        label = { Text("Logout", color = MaterialTheme.colorScheme.error) },
+                        selected = false,
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                appViewModel.logout()
+                            }
+                        },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+                }
             }
         }
     ) {
@@ -123,7 +161,7 @@ fun DashboardScreen(
 }
 
 @Composable
-fun SidebarHeader(authMode: AuthMode, onLoginClick: () -> Unit) {
+fun SidebarHeader(authMode: AuthMode, friendCode: String?, onLoginClick: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
         if (authMode == AuthMode.LOGGED_IN) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -133,7 +171,16 @@ fun SidebarHeader(authMode: AuthMode, onLoginClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary
                 ) {}
                 Spacer(modifier = Modifier.width(16.dp))
-                Text("Hanu", style = MaterialTheme.typography.titleLarge)
+                Column {
+                    Text("Hanu", style = MaterialTheme.typography.titleLarge)
+                    if (!friendCode.isNullOrEmpty()) {
+                        Text(
+                            friendCode,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
             }
         } else {
             Button(

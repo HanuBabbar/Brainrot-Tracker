@@ -21,6 +21,11 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // Reset state whenever we enter this screen
+    LaunchedEffect(Unit) {
+        viewModel.resetState()
+    }
+
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
             onLoginSuccess()
@@ -75,7 +80,8 @@ fun LoginScreen(
                 Text(
                     text = (uiState as LoginUiState.Error).message,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier.padding(top = 16.dp),
+                    textAlign = TextAlign.Center
                 )
             }
         }

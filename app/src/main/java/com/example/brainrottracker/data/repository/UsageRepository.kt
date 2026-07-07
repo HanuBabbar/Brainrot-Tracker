@@ -81,7 +81,9 @@ class UsageRepository(
         val stats = usageDao.getWeeklyUsage().first()
 
         try {
-            val response = NetworkClient.client.post("http://10.0.2.2:3000/api/v1/sync") {
+            // Use the BASE_URL from NetworkClient
+            val url = "${NetworkClient.BASE_URL}sync"
+            val response = NetworkClient.client.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(SyncRequest(userId, stats))
             }

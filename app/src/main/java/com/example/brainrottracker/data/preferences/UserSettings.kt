@@ -21,6 +21,7 @@ class UserSettings(private val context: Context) {
         private val LAST_NOTIFIED_DATE_KEY = stringPreferencesKey("last_notified_date")
         private val CPU_MODE_KEY = stringPreferencesKey("cpu_mode")
         private val USER_ID_KEY = stringPreferencesKey("user_id")
+        private val FRIEND_CODE_KEY = stringPreferencesKey("friend_code")
     }
 
     suspend fun setAuthMode(mode: AuthMode) {
@@ -57,6 +58,16 @@ class UserSettings(private val context: Context) {
         }
     }
 
+    suspend fun setFriendCode(code: String?) {
+        context.dataStore.edit { prefs ->
+            if (code != null) {
+                prefs[FRIEND_CODE_KEY] = code
+            } else {
+                prefs.remove(FRIEND_CODE_KEY)
+            }
+        }
+    }
+
     val authMode: Flow<AuthMode> = context.dataStore.data.map { prefs ->
         val stored = prefs[AUTH_MODE_KEY]
         try {
@@ -85,5 +96,9 @@ class UserSettings(private val context: Context) {
 
     val userId: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[USER_ID_KEY]
+    }
+
+    val friendCode: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[FRIEND_CODE_KEY]
     }
 }
