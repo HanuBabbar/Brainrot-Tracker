@@ -18,9 +18,24 @@ class AppViewModel(private val userSettings: UserSettings) : ViewModel() {
             initialValue = AuthMode.UNKNOWN
         )
 
+    val friendCode: StateFlow<String?> = userSettings.friendCode
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
     fun setAuthMode(mode: AuthMode) {
         viewModelScope.launch {
             userSettings.setAuthMode(mode)
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            userSettings.setUserId(null)
+            userSettings.setFriendCode(null)
+            userSettings.setAuthMode(AuthMode.UNKNOWN)
         }
     }
 }

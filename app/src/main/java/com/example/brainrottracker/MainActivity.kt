@@ -28,6 +28,10 @@ import com.example.brainrottracker.ui.dashboard.DashboardScreen
 import com.example.brainrottracker.ui.dashboard.DashboardViewModel
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageScreen
 import com.example.brainrottracker.ui.dashboard.WeeklyUsageViewModel
+import com.example.brainrottracker.ui.friends.FriendsScreen
+import com.example.brainrottracker.ui.friends.FriendsViewModel
+import com.example.brainrottracker.ui.leaderboard.LeaderboardScreen
+import com.example.brainrottracker.ui.leaderboard.LeaderboardViewModel
 import com.example.brainrottracker.ui.login.LoginScreen
 import com.example.brainrottracker.ui.login.LoginViewModel
 import com.example.brainrottracker.ui.settings.SettingsScreen
@@ -50,7 +54,9 @@ class MainActivity : ComponentActivity() {
         val dashboardViewModel = DashboardViewModel(repository)
         val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
         val settingsViewModel = SettingsViewModel(userSettings)
-        val loginViewModel = LoginViewModel(userSettings)
+        val loginViewModel = LoginViewModel(userSettings, repository)
+        val friendsViewModel = FriendsViewModel(userSettings)
+        val leaderboardViewModel = LeaderboardViewModel(userSettings)
 
         setContent {
             BrainrotTrackerTheme {
@@ -59,7 +65,9 @@ class MainActivity : ComponentActivity() {
                     dashboardViewModel = dashboardViewModel,
                     weeklyUsageViewModel = weeklyUsageViewModel,
                     settingsViewModel = settingsViewModel,
-                    loginViewModel = loginViewModel
+                    loginViewModel = loginViewModel,
+                    friendsViewModel = friendsViewModel,
+                    leaderboardViewModel = leaderboardViewModel,
                 )
             }
         }
@@ -72,7 +80,9 @@ fun AppRoot(
     dashboardViewModel: DashboardViewModel,
     weeklyUsageViewModel: WeeklyUsageViewModel,
     settingsViewModel: SettingsViewModel,
-    loginViewModel: LoginViewModel
+    loginViewModel: LoginViewModel,
+    friendsViewModel: FriendsViewModel,
+    leaderboardViewModel: LeaderboardViewModel,
 ) {
     val context = LocalContext.current
     val authMode by appViewModel.authMode.collectAsState()
@@ -137,7 +147,15 @@ fun AppRoot(
                             appViewModel = appViewModel,
                             onNavigateToWeekly = { currentScreen = Screen.WeeklyUsage },
                             onNavigateToSettings = { currentScreen = Screen.Settings },
-                            onNavigateToLogin = { currentScreen = Screen.Login }
+                            onNavigateToLogin = { currentScreen = Screen.Login },
+                            onNavigateToFriends = {
+                                friendsViewModel.loadFriends()
+                                currentScreen = Screen.Friends
+                            },
+                            onNavigateToLeaderboard = {
+                                leaderboardViewModel.refresh()
+                                currentScreen = Screen.Leaderboard
+                            },
                         )
                     }
                     is Screen.WeeklyUsage -> {
@@ -157,6 +175,18 @@ fun AppRoot(
                             viewModel = loginViewModel,
                             onNavigateBack = { currentScreen = Screen.Dashboard },
                             onLoginSuccess = { currentScreen = Screen.Dashboard }
+                        )
+                    }
+                    is Screen.Friends -> {
+                        FriendsScreen(
+                            viewModel = friendsViewModel,
+                            onNavigateBack = { currentScreen = Screen.Dashboard },
+                        )
+                    }
+                    is Screen.Leaderboard -> {
+                        LeaderboardScreen(
+                            viewModel = leaderboardViewModel,
+                            onNavigateBack = { currentScreen = Screen.Dashboard },
                         )
                     }
                 }
