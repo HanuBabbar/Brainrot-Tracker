@@ -27,6 +27,7 @@ fun DashboardScreen(
     val stats by viewModel.todayStats.collectAsState()
     val authMode by appViewModel.authMode.collectAsState()
     val friendCode by appViewModel.friendCode.collectAsState()
+    val userName by appViewModel.userName.collectAsState()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -38,6 +39,7 @@ fun DashboardScreen(
                 SidebarHeader(
                     authMode = authMode,
                     friendCode = friendCode,
+                    userName = userName,
                     onLoginClick = {
                         scope.launch { drawerState.close() }
                         onNavigateToLogin()
@@ -161,7 +163,7 @@ fun DashboardScreen(
 }
 
 @Composable
-fun SidebarHeader(authMode: AuthMode, friendCode: String?, onLoginClick: () -> Unit) {
+fun SidebarHeader(authMode: AuthMode, friendCode: String?, userName: String?, onLoginClick: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
         if (authMode == AuthMode.LOGGED_IN) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -172,7 +174,7 @@ fun SidebarHeader(authMode: AuthMode, friendCode: String?, onLoginClick: () -> U
                 ) {}
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text("Hanu", style = MaterialTheme.typography.titleLarge)
+                    Text(userName ?: "User", style = MaterialTheme.typography.titleLarge)
                     if (!friendCode.isNullOrEmpty()) {
                         Text(
                             friendCode,

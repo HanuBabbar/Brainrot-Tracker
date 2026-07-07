@@ -105,6 +105,7 @@ class LoginViewModel(
 
                     userSettings.setUserId(userId)
                     authResponse?.user?.friendCode?.let { userSettings.setFriendCode(it) }
+                    authResponse?.user?.name?.let { userSettings.setUserName(it) }
                     userSettings.setAuthMode(AuthMode.LOGGED_IN)
 
                     // Immediately sync all local data under the correct server userId
