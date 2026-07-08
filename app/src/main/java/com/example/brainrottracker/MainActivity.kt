@@ -38,6 +38,8 @@ import com.example.brainrottracker.ui.settings.SettingsScreen
 import com.example.brainrottracker.ui.settings.SettingsViewModel
 import com.example.brainrottracker.ui.theme.BrainrotTrackerTheme
 import com.example.brainrottracker.util.NotificationHelper
+import com.example.brainrottracker.data.preferences.ThemeMode
+import androidx.compose.foundation.isSystemInDarkTheme
 
 
 class MainActivity : ComponentActivity() {
@@ -51,7 +53,7 @@ class MainActivity : ComponentActivity() {
         val database = AppDatabase.getDatabase(this)
         val notificationHelper = NotificationHelper(this)
         val repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
-        val dashboardViewModel = DashboardViewModel(repository)
+        val dashboardViewModel = DashboardViewModel(repository, userSettings)
         val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
         val settingsViewModel = SettingsViewModel(userSettings)
         val loginViewModel = LoginViewModel(userSettings, repository)
@@ -59,7 +61,13 @@ class MainActivity : ComponentActivity() {
         val leaderboardViewModel = LeaderboardViewModel(userSettings)
 
         setContent {
-            BrainrotTrackerTheme {
+            val themeMode by userSettings.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+            val isDark = when(themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            BrainrotTrackerTheme(darkTheme = isDark) {
                 AppRoot(
                     appViewModel = appViewModel,
                     dashboardViewModel = dashboardViewModel,
