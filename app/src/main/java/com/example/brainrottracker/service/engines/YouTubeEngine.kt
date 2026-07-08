@@ -40,7 +40,8 @@ class YouTubeEngine(private val resources: Resources) : PlatformEngine {
         }
     }
 
-    fun resetDumpFlag() {
+    override fun onWindowFocused() {
+        // Reset the tree-dump flag so we log the tree once per new Shorts session
         lastDumpedPackage = ""
     }
 

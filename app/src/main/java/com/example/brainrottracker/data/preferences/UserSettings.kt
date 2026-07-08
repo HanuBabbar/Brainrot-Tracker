@@ -3,6 +3,7 @@ package com.example.brainrottracker.data.preferences
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -23,6 +24,8 @@ class UserSettings(private val context: Context) {
         private val USER_ID_KEY = stringPreferencesKey("user_id")
         private val FRIEND_CODE_KEY = stringPreferencesKey("friend_code")
         private val USER_NAME_KEY = stringPreferencesKey("user_name")
+        private val VIBRATION_ENABLED_KEY = booleanPreferencesKey("vibration_enabled")
+        private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
     }
 
     suspend fun setAuthMode(mode: AuthMode) {
@@ -79,6 +82,18 @@ class UserSettings(private val context: Context) {
         }
     }
 
+    suspend fun setVibrationEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[VIBRATION_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { prefs ->
+            prefs[THEME_MODE_KEY] = mode.name
+        }
+    }
+
     val authMode: Flow<AuthMode> = context.dataStore.data.map { prefs ->
         val stored = prefs[AUTH_MODE_KEY]
         try {
@@ -115,5 +130,18 @@ class UserSettings(private val context: Context) {
 
     val userName: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[USER_NAME_KEY]
+    }
+
+    val vibrationEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[VIBRATION_ENABLED_KEY] ?: true // Default to true
+    }
+
+    val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
+        val stored = prefs[THEME_MODE_KEY]
+        try {
+            stored?.let { ThemeMode.valueOf(it) } ?: ThemeMode.SYSTEM
+        } catch (e: IllegalArgumentException) {
+            ThemeMode.SYSTEM
+        }
     }
 }

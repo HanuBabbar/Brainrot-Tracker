@@ -214,20 +214,13 @@ private fun FriendsListTab(
             )
         }
         items(friends, key = { it.userId }) { friend ->
-            FriendCard(friend = friend, rank = friends.indexOf(friend) + 1, onRemove = { onRemove(friend.userId) })
+            FriendCard(friend = friend, onRemove = { onRemove(friend.userId) })
         }
     }
 }
 
 @Composable
-private fun FriendCard(friend: FriendProfile, rank: Int, onRemove: () -> Unit) {
-    val rankGradient = when (rank) {
-        1 -> Brush.horizontalGradient(listOf(Color(0xFFFFD700), Color(0xFFFFA000)))
-        2 -> Brush.horizontalGradient(listOf(Color(0xFFC0C0C0), Color(0xFF9E9E9E)))
-        3 -> Brush.horizontalGradient(listOf(Color(0xFFCD7F32), Color(0xFF8D6E63)))
-        else -> null
-    }
-
+private fun FriendCard(friend: FriendProfile, onRemove: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -241,26 +234,19 @@ private fun FriendCard(friend: FriendProfile, rank: Int, onRemove: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Rank badge
+                // Profile Avatar
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(
-                            rankGradient ?: Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                )
-                            )
-                        ),
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        "#$rank",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (rank <= 3) Color.White else MaterialTheme.colorScheme.onPrimaryContainer,
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -275,15 +261,6 @@ private fun FriendCard(friend: FriendProfile, rank: Int, onRemove: () -> Unit) {
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        "${friend.todayTotal}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text("today", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                }
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Default.Close,

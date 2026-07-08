@@ -9,37 +9,52 @@ import android.view.accessibility.AccessibilityEvent
 import com.example.brainrottracker.data.local.AppDatabase
 import com.example.brainrottracker.data.preferences.UserSettings
 import com.example.brainrottracker.data.repository.UsageRepository
-import com.example.brainrottracker.service.engines.InstagramEngine
-import com.example.brainrottracker.service.engines.YouTubeEngine
+import com.example.brainrottracker.service.engines.PlatformRegistry
+import com.example.brainrottracker.service.engines.TrackedPlatform
 import com.example.brainrottracker.util.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 
 class BrainrotTrackerService : AccessibilityService() {
 
-    // Scope for background database operations
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private lateinit var repository: UsageRepository
     private lateinit var userSettings: UserSettings
-    
-    // Performance throttling
+
+    private val disableReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_DISABLE_SERVICE) {
+                Log.d("BrainrotTracker", "Received disable intent. Disabling self.")
+                disableSelf()
+            }
+        }
+    }
+
+    // Performance throttling for heavy TYPE_WINDOW_CONTENT_CHANGED scans
     private var lastTreeCheckTime = 0L
     private var currentIntervalMs = 750L // Default Medium
 
-    // Decoupled engines
-    private lateinit var youtubeEngine: YouTubeEngine
-    private lateinit var instagramEngine: InstagramEngine
+    /**
+     * All tracked platforms keyed by package name.
+     * Built from [PlatformRegistry] — no platform-specific logic lives here.
+     */
+    private lateinit var platforms: Map<String, TrackedPlatform>
 
     companion object {
+        const val ACTION_DISABLE_SERVICE = "com.example.brainrottracker.ACTION_DISABLE_SERVICE"
+
         fun isServiceEnabled(context: Context): Boolean {
             val expectedComponentName = ComponentName(context, BrainrotTrackerService::class.java)
             val enabledServices = Settings.Secure.getString(
                 context.contentResolver,
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
             ) ?: return false
-
             return enabledServices.contains(expectedComponentName.flattenToString())
         }
     }
@@ -48,50 +63,39 @@ class BrainrotTrackerService : AccessibilityService() {
         event ?: return
         val packageName = event.packageName?.toString() ?: return
 
-        if (packageName != "com.instagram.android" && packageName != "com.google.android.youtube") return
+        // Ignore events from apps we don't track — O(1) map lookup, no if/else chain
+        val platform = platforms[packageName] ?: return
 
         val now = System.currentTimeMillis()
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                Log.d("BrainrotTracker", "Focus: $packageName")
-                if (packageName == "com.google.android.youtube") {
-                    youtubeEngine.resetDumpFlag()
-                }
+                Log.d("BrainrotTracker", "Focus: ${platform.displayName}")
+                platform.engine.onWindowFocused()
             }
+
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
-                // Scrolls are high-signal, we don't throttle them as much as content changes
-                if (packageName == "com.instagram.android") {
-                    val root = rootInActiveWindow ?: return
-                    instagramEngine.detectSwipe(root) {
-                        saveSwipe("Instagram")
-                    }
-                    root.recycle()
-                }
+                // High-signal scroll events — not throttled
+                val root = rootInActiveWindow ?: return
+                platform.engine.detectSwipe(root) { saveSwipe(platform.displayName) }
+                root.recycle()
             }
+
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                // Throttle heavy tree scans based on user preference
+                // Throttle heavy tree scans based on user CPU preference
                 if (now - lastTreeCheckTime < currentIntervalMs) return
                 lastTreeCheckTime = now
 
                 val root = rootInActiveWindow ?: return
-                if (packageName == "com.google.android.youtube") {
-                    youtubeEngine.detectSwipe(root) {
-                        saveSwipe("YouTube")
-                    }
-                } else if (packageName == "com.instagram.android") {
-                    instagramEngine.detectSwipe(root) {
-                        saveSwipe("Instagram")
-                    }
-                }
+                platform.engine.detectSwipe(root) { saveSwipe(platform.displayName) }
                 root.recycle()
             }
         }
     }
 
-    private fun saveSwipe(platform: String) {
+    private fun saveSwipe(platformDisplayName: String) {
         serviceScope.launch {
-            repository.incrementUsage(platform)
+            repository.incrementUsage(platformDisplayName)
         }
     }
 
@@ -100,24 +104,29 @@ class BrainrotTrackerService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
 
-        // Setup database and repository
+        val filter = IntentFilter(ACTION_DISABLE_SERVICE)
+        ContextCompat.registerReceiver(this, disableReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+
         val database = AppDatabase.getDatabase(this)
         userSettings = UserSettings(this)
         val notificationHelper = NotificationHelper(this)
         repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
 
-        // Initialize engines
-        youtubeEngine = YouTubeEngine(resources)
-        instagramEngine = InstagramEngine(resources)
+        // Build the engine map from the registry — adding a platform only touches PlatformRegistry
+        platforms = PlatformRegistry.build(resources)
 
-        // Observe CPU mode changes
         serviceScope.launch {
             userSettings.cpuMode.collect { mode ->
                 currentIntervalMs = mode.intervalMs
-                Log.d("BrainrotTracker", "CPU Mode updated: ${mode.name} (${mode.intervalMs}ms)")
+                Log.d("BrainrotTracker", "CPU Mode: ${mode.name} (${mode.intervalMs}ms)")
             }
         }
 
-        Log.d("BrainrotTracker", "Service Connected and Engines Ready!")
+        Log.d("BrainrotTracker", "Service ready — tracking: ${platforms.values.map { it.displayName }}")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(disableReceiver)
     }
 }

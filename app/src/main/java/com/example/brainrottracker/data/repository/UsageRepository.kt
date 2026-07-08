@@ -13,6 +13,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -22,8 +23,14 @@ class UsageRepository(
     private val notificationHelper: NotificationHelper
 ) {
 
-    private fun getTodayDate(): String {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    private fun getTodayDate(): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+    /** Returns the ISO date string 6 days before today (inclusive = last 7 days). */
+    private fun getSevenDaysAgoCutoff(): String {
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.DAY_OF_YEAR, -6)
+        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
     }
 
     suspend fun incrementUsage(platform: String) {
@@ -60,25 +67,26 @@ class UsageRepository(
         val totalCount = usageDao.getTotalCountForDateSync(date) ?: 0
         val limit = userSettings.dailyLimit.first()
         val lastNotifiedDate = userSettings.lastNotifiedDate.first()
+        val vibrate = userSettings.vibrationEnabled.first()
         
         android.util.Log.d("BrainrotTracker", "Limit Check: Total=$totalCount, Limit=$limit, LastNotified=$lastNotifiedDate, Date=$date")
 
         if (totalCount >= limit && lastNotifiedDate != date) {
             android.util.Log.d("BrainrotTracker", "CONDITION MET: Triggering notification!")
-            notificationHelper.sendLimitReachedNotification(totalCount)
+            notificationHelper.sendLimitReachedNotification(totalCount, vibrate)
             userSettings.setLastNotifiedDate(date)
         } else {
             android.util.Log.d("BrainrotTracker", "CONDITION NOT MET: totalCount < limit OR already notified today")
         }
     }
 
-    fun getWeekly(): Flow<List<UsageEntity>> = usageDao.getWeeklyUsage()
+    fun getWeekly(): Flow<List<UsageEntity>> = usageDao.getWeeklyUsage(getSevenDaysAgoCutoff())
 
     fun getTodayTotal(): Flow<Int?> = usageDao.getTotalCountForDate(getTodayDate())
 
     suspend fun syncData() {
         val userId = userSettings.userId.first() ?: return
-        val stats = usageDao.getWeeklyUsage().first()
+        val stats = usageDao.getWeeklyUsage(getSevenDaysAgoCutoff()).first()
 
         try {
             // Use the BASE_URL from NetworkClient
