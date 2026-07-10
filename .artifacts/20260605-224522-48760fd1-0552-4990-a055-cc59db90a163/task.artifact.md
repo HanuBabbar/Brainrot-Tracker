@@ -1,0 +1,21 @@
+# Task Management
+
+- [/] Setup Room Database Layer
+	- [ ] Update dependencies in `libs.versions.toml` and `build.gradle.kts`
+	- [ ] Create `UsageEntity.kt`
+	- [ ] Create `UsageDao.kt`
+	- [ ] Create `AppDatabase.kt`
+- [ ] Implement Repository Layer
+	- [ ] Create `UsageRepository.kt`
+- [ ] Connect Service to Database
+	- [ ] Update `BrainrotTrackerService.kt` to save swipes
+- [ ] Implement UI Components
+	- [ ] Create ViewModel for Dashboard
+	- [ ] Create Dashboard UI with weekly graphs
+- [ ] Implement Settings & CPU Modes
+	- [ ] Setup DataStore for user preferences
+	- [ ] Create Settings UI
+- [ ] Implement Notifications & Limits
+	- [ ] Add logic to check limits and show notifications
+- [ ] Implement Home Screen Widget
+	- [ ] Create `TrackerWidget.kt`
