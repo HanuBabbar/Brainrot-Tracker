@@ -25,6 +25,22 @@ import com.example.brainrottracker.data.local.AppDatabase
 import com.example.brainrottracker.data.repository.UsageRepository
 import com.example.brainrottracker.data.preferences.UserSettings
 import com.example.brainrottracker.util.NotificationHelper
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.color.ColorProvider
+import androidx.compose.ui.graphics.Color
+import android.content.ComponentName
+import android.content.Intent
+import com.example.brainrottracker.MainActivity
+
+private val WidgetBackground = ColorProvider(
+    day = Color(0xFFF3F4F6),
+    night = Color(0xFF1E1E1E)
+)
+private val WidgetTextColor = ColorProvider(
+    day = Color(0xFF111827),
+    night = Color(0xFFE5E7EB)
+)
 
 class BrainrotWidget : GlanceAppWidget() {
 
@@ -49,32 +65,33 @@ class BrainrotWidget : GlanceAppWidget() {
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(GlanceTheme.colors.widgetBackground)
-                .padding(8.dp),
+                .background(WidgetBackground)
+                .clickable(actionStartActivity(Intent().setComponent(ComponentName("com.example.brainrottracker", "com.example.brainrottracker.MainActivity"))))
+                .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Today's Brainrot",
+                text = "Brainrot",
                 style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontSize = 12.sp
+                    color = WidgetTextColor,
+                    fontSize = 10.sp
                 )
             )
-            Spacer(modifier = GlanceModifier.height(4.dp))
+            Spacer(modifier = GlanceModifier.height(2.dp))
             Text(
                 text = count.toString(),
                 style = TextStyle(
                     color = GlanceTheme.colors.primary,
-                    fontSize = 32.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
             )
             Text(
                 text = "Swipes",
                 style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 10.sp
+                    color = WidgetTextColor,
+                    fontSize = 8.sp
                 )
             )
         }
