@@ -23,6 +23,9 @@ class SettingsViewModel(
     val vibrationEnabled: StateFlow<Boolean> = userSettings.vibrationEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val persistentNotificationEnabled: StateFlow<Boolean> = userSettings.persistentNotificationEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val themeMode: StateFlow<ThemeMode> = userSettings.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
@@ -41,6 +44,12 @@ class SettingsViewModel(
     fun setVibrationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userSettings.setVibrationEnabled(enabled)
+        }
+    }
+
+    fun setPersistentNotificationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSettings.setPersistentNotificationEnabled(enabled)
         }
     }
 

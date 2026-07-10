@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
@@ -34,6 +35,7 @@ fun SettingsScreen(
     val dailyLimit by viewModel.dailyLimit.collectAsState()
     val cpuMode by viewModel.cpuMode.collectAsState()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsState()
+    val persistentNotificationEnabled by viewModel.persistentNotificationEnabled.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
 
     val context = LocalContext.current
@@ -45,7 +47,7 @@ fun SettingsScreen(
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
                     }
                 }
             )
@@ -119,6 +121,25 @@ fun SettingsScreen(
                     Switch(
                         checked = vibrationEnabled,
                         onCheckedChange = { viewModel.setVibrationEnabled(it) }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Persistent notification", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Show an ongoing notification to quickly disable the app.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Switch(
+                        checked = persistentNotificationEnabled,
+                        onCheckedChange = { viewModel.setPersistentNotificationEnabled(it) }
                     )
                 }
             }
