@@ -12,8 +12,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
@@ -41,7 +45,8 @@ fun FriendsScreen(
     onNavigateBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val coroutineScope = rememberCoroutineScope()
     var searchCode by remember { mutableStateOf("") }
 
     // Show snackbar for action messages
@@ -60,7 +65,7 @@ fun FriendsScreen(
                 title = { Text("Friends", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -75,20 +80,20 @@ fun FriendsScreen(
                 .padding(padding)
         ) {
             // Tab Row
-            TabRow(selectedTabIndex = selectedTab) {
+            TabRow(selectedTabIndex = pagerState.currentPage) {
                 Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    selected = pagerState.currentPage == 0,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     text = {
                         Text(
                             "My Friends",
-                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 )
                 Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    selected = pagerState.currentPage == 1,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                     text = {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -96,7 +101,7 @@ fun FriendsScreen(
                         ) {
                             Text(
                                 "Requests",
-                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal
                             )
                             if (state.pendingRequests.isNotEmpty()) {
                                 Badge { Text("${state.pendingRequests.size}") }
@@ -105,23 +110,22 @@ fun FriendsScreen(
                     }
                 )
                 Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
+                    selected = pagerState.currentPage == 2,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                     text = {
                         Text(
                             "Add Friend",
-                            fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (pagerState.currentPage == 2) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 )
             }
 
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "friends_tab"
-            ) { tab ->
-                when (tab) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (page) {
                     0 -> FriendsListTab(
                         friends = state.friends,
                         isLoading = state.isLoading,
@@ -202,6 +206,7 @@ private fun FriendsListTab(
     }
 
     LazyColumn(
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -281,6 +286,7 @@ private fun RequestsTab(
     onDecline: (String) -> Unit,
 ) {
     LazyColumn(
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

@@ -1,37 +1,39 @@
 package com.example.brainrottracker.widget
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.appwidget.LinearProgressIndicator
 import com.example.brainrottracker.data.local.AppDatabase
-import com.example.brainrottracker.data.repository.UsageRepository
 import com.example.brainrottracker.data.preferences.UserSettings
+import com.example.brainrottracker.data.repository.UsageRepository
 import com.example.brainrottracker.util.NotificationHelper
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.color.ColorProvider
-import androidx.compose.ui.graphics.Color
-import android.content.ComponentName
-import android.content.Intent
-import com.example.brainrottracker.MainActivity
 
 private val WidgetBackground = ColorProvider(
     day = Color(0xFFF3F4F6),
@@ -41,11 +43,14 @@ private val WidgetTextColor = ColorProvider(
     day = Color(0xFF111827),
     night = Color(0xFFE5E7EB)
 )
+private val WidgetPrimaryColor = ColorProvider(
+    day = Color(0xFF6200EE),
+    night = Color(0xFFBB86FC)
+)
 
-class BrainrotWidget : GlanceAppWidget() {
+class BrainrotMeterWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        // Initialize repository to fetch data
         val database = AppDatabase.getDatabase(context)
         val userSettings = UserSettings(context)
         val notificationHelper = NotificationHelper(context)
@@ -53,51 +58,54 @@ class BrainrotWidget : GlanceAppWidget() {
         
         provideContent {
             val count by repository.getTodayTotal().collectAsState(initial = 0)
+            val limit by userSettings.dailyLimit.collectAsState(initial = 100)
             
             GlanceTheme {
-                WidgetContent(count ?: 0)
+                WidgetContent(count ?: 0, limit)
             }
         }
     }
 
     @androidx.compose.runtime.Composable
-    private fun WidgetContent(count: Int) {
+    private fun WidgetContent(count: Int, limit: Int) {
+        val progress = if (limit > 0) (count.toFloat() / limit).coerceIn(0f, 1f) else 0f
+        
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(WidgetBackground)
                 .clickable(actionStartActivity(Intent().setComponent(ComponentName("com.example.brainrottracker", "com.example.brainrottracker.MainActivity"))))
-                .padding(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Brainrot",
-                style = TextStyle(
-                    color = WidgetTextColor,
-                    fontSize = 10.sp
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Daily Limit",
+                    style = TextStyle(color = WidgetTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 )
-            )
-            Spacer(modifier = GlanceModifier.height(2.dp))
-            Text(
-                text = count.toString(),
-                style = TextStyle(
-                    color = GlanceTheme.colors.primary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                Spacer(modifier = GlanceModifier.defaultWeight())
+                Text(
+                    text = "$count / $limit",
+                    style = TextStyle(color = WidgetTextColor, fontSize = 12.sp)
                 )
-            )
-            Text(
-                text = "Swipes",
-                style = TextStyle(
-                    color = WidgetTextColor,
-                    fontSize = 8.sp
+            }
+            Spacer(modifier = GlanceModifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = progress,
+                modifier = GlanceModifier.fillMaxWidth(),
+                color = WidgetPrimaryColor,
+                backgroundColor = ColorProvider(
+                    day = Color.Gray.copy(alpha = 0.3f),
+                    night = Color.Gray.copy(alpha = 0.3f)
                 )
             )
         }
     }
 }
 
-class BrainrotWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = BrainrotWidget()
+class BrainrotMeterWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = BrainrotMeterWidget()
 }

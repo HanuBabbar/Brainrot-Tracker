@@ -46,142 +46,75 @@ private val PLATFORMS = listOf(
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
-    appViewModel: AppViewModel,
-    onNavigateToWeekly: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToLogin: () -> Unit,
-    onNavigateToFriends: () -> Unit,
-    onNavigateToLeaderboard: () -> Unit,
+    onMenuClick: () -> Unit,
 ) {
     val stats         by viewModel.todayStats.collectAsState()
     val yesterday     by viewModel.yesterdayStats.collectAsState()
     val dailyLimit    by viewModel.dailyLimit.collectAsState()
-    val authMode      by appViewModel.authMode.collectAsState()
-    val friendCode    by appViewModel.friendCode.collectAsState()
-    val userName      by appViewModel.userName.collectAsState()
-
-    val drawerState   = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope         = rememberCoroutineScope()
 
     val totalToday = stats.values.sumOf { it }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                SidebarHeader(
-                    authMode   = authMode,
-                    friendCode = friendCode,
-                    userName   = userName,
-                    onLoginClick = {
-                        scope.launch { drawerState.close() }
-                        onNavigateToLogin()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Brainrot Tracker") },
+                navigationIcon = {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
                     }
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                NavigationDrawerItem(
-                    label    = { Text("Dashboard") },
-                    selected = true,
-                    onClick  = { scope.launch { drawerState.close() } },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label    = { Text("Weekly Usage") },
-                    selected = false,
-                    onClick  = { scope.launch { drawerState.close() }; onNavigateToWeekly() },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label    = { Text("Friends") },
-                    selected = false,
-                    onClick  = { scope.launch { drawerState.close() }; onNavigateToFriends() },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label    = { Text("Leaderboard") },
-                    selected = false,
-                    onClick  = { scope.launch { drawerState.close() }; onNavigateToLeaderboard() },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label    = { Text("Settings") },
-                    selected = false,
-                    onClick  = { scope.launch { drawerState.close() }; onNavigateToSettings() },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                if (authMode != AuthMode.UNKNOWN) {
-                    NavigationDrawerItem(
-                        label    = { Text("Logout", color = MaterialTheme.colorScheme.error) },
-                        selected = false,
-                        onClick  = { scope.launch { drawerState.close(); appViewModel.logout() } },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
                 }
-            }
+            )
         }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Brainrot Tracker") },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
-                        }
-                    }
-                )
-            }
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // ── Hero ring ──────────────────────────────────────────────
+            DailyProgressHero(total = totalToday, limit = dailyLimit)
+
+            // ── Platform cards ─────────────────────────────────────────
+            Text(
+                text = "Today's Breakdown",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Instagram + YouTube side by side
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // ── Hero ring ──────────────────────────────────────────────
-                DailyProgressHero(total = totalToday, limit = dailyLimit)
-
-                // ── Platform cards ─────────────────────────────────────────
-                Text(
-                    text = "Today's Breakdown",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                // Instagram + YouTube side by side
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    PLATFORMS.take(2).forEach { meta ->
-                        PlatformCard(
-                            meta      = meta,
-                            count     = stats[meta.key] ?: 0,
-                            yesterday = yesterday[meta.key] ?: 0,
-                            limit     = dailyLimit,
-                            modifier  = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // TikTok full-width
-                PLATFORMS.drop(2).forEach { meta ->
+                PLATFORMS.take(2).forEach { meta ->
                     PlatformCard(
                         meta      = meta,
                         count     = stats[meta.key] ?: 0,
                         yesterday = yesterday[meta.key] ?: 0,
                         limit     = dailyLimit,
-                        modifier  = Modifier.fillMaxWidth()
+                        modifier  = Modifier.weight(1f)
                     )
                 }
-
-                // ── Contextual message ─────────────────────────────────────
-                ContextualMessage(total = totalToday, limit = dailyLimit)
-
-                Spacer(Modifier.height(8.dp))
             }
+
+            // TikTok full-width
+            PLATFORMS.drop(2).forEach { meta ->
+                PlatformCard(
+                    meta      = meta,
+                    count     = stats[meta.key] ?: 0,
+                    yesterday = yesterday[meta.key] ?: 0,
+                    limit     = dailyLimit,
+                    modifier  = Modifier.fillMaxWidth()
+                )
+            }
+
+            // ── Contextual message ─────────────────────────────────────
+            ContextualMessage(total = totalToday, limit = dailyLimit)
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 }

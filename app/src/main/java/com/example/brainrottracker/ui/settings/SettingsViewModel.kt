@@ -5,14 +5,34 @@ import androidx.lifecycle.viewModelScope
 import com.example.brainrottracker.data.preferences.CPUMode
 import com.example.brainrottracker.data.preferences.ThemeMode
 import com.example.brainrottracker.data.preferences.UserSettings
+import com.example.brainrottracker.data.remote.ProfileApiService
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     private val userSettings: UserSettings
 ) : ViewModel() {
+
+    private val _updateNameState = MutableStateFlow<UiState>(UiState.Idle)
+    val updateNameState = _updateNameState.asStateFlow()
+
+    sealed class UiState {
+        object Idle : UiState()
+        object Loading : UiState()
+        data class Success(val message: String) : UiState()
+        data class Error(val message: String) : UiState()
+    }
+
+    val userId: StateFlow<String?> = userSettings.userId
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val userName: StateFlow<String?> = userSettings.userName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val dailyLimit: StateFlow<Int> = userSettings.dailyLimit
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100)
@@ -22,6 +42,9 @@ class SettingsViewModel(
 
     val vibrationEnabled: StateFlow<Boolean> = userSettings.vibrationEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val persistentNotificationEnabled: StateFlow<Boolean> = userSettings.persistentNotificationEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val themeMode: StateFlow<ThemeMode> = userSettings.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
@@ -44,9 +67,44 @@ class SettingsViewModel(
         }
     }
 
+    fun setPersistentNotificationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSettings.setPersistentNotificationEnabled(enabled)
+        }
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             userSettings.setThemeMode(mode)
         }
+    }
+
+    fun updateUserName(newName: String) {
+        if (newName.isBlank()) {
+            _updateNameState.value = UiState.Error("Name cannot be empty")
+            return
+        }
+
+        viewModelScope.launch {
+            val currentUserId = userSettings.userId.firstOrNull()
+            if (currentUserId == null) {
+                _updateNameState.value = UiState.Error("User ID not found. Try logging in again.")
+                return@launch
+            }
+
+            _updateNameState.value = UiState.Loading
+            val result = ProfileApiService.updateProfileName(currentUserId, newName)
+            
+            result.onSuccess { response ->
+                userSettings.setUserName(newName.trim())
+                _updateNameState.value = UiState.Success("Profile updated successfully")
+            }.onFailure { error ->
+                _updateNameState.value = UiState.Error(error.message ?: "Failed to update profile")
+            }
+        }
+    }
+    
+    fun resetUpdateNameState() {
+        _updateNameState.value = UiState.Idle
     }
 }

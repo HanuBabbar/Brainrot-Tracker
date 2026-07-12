@@ -9,7 +9,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -34,10 +36,29 @@ fun SettingsScreen(
     val dailyLimit by viewModel.dailyLimit.collectAsState()
     val cpuMode by viewModel.cpuMode.collectAsState()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsState()
+    val persistentNotificationEnabled by viewModel.persistentNotificationEnabled.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    
+    val userName by viewModel.userName.collectAsState()
+    val updateNameState by viewModel.updateNameState.collectAsState()
 
     val context = LocalContext.current
     var limitInput by remember(dailyLimit) { mutableStateOf(dailyLimit.toString()) }
+    var nameInput by remember(userName) { mutableStateOf(userName ?: "") }
+
+    LaunchedEffect(updateNameState) {
+        when (val state = updateNameState) {
+            is SettingsViewModel.UiState.Success -> {
+                android.widget.Toast.makeText(context, state.message, android.widget.Toast.LENGTH_SHORT).show()
+                viewModel.resetUpdateNameState()
+            }
+            is SettingsViewModel.UiState.Error -> {
+                android.widget.Toast.makeText(context, state.message, android.widget.Toast.LENGTH_SHORT).show()
+                viewModel.resetUpdateNameState()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -45,7 +66,7 @@ fun SettingsScreen(
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
                     }
                 }
             )
@@ -59,6 +80,52 @@ fun SettingsScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(32.dp)
         ) {
+            // Profile Section
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Profile",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = nameInput,
+                        onValueChange = { nameInput = it },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Display Name") },
+                        singleLine = true
+                    )
+
+                    Button(
+                        onClick = { viewModel.updateUserName(nameInput) },
+                        enabled = nameInput.isNotBlank() && nameInput != userName && updateNameState !is SettingsViewModel.UiState.Loading,
+                        modifier = Modifier.height(56.dp) // Match height of OutlinedTextField
+                    ) {
+                        if (updateNameState is SettingsViewModel.UiState.Loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                }
+                Text(
+                    text = "This name will be shown on the leaderboard.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+            
+            HorizontalDivider()
+
             // Daily Limit Section
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column {
@@ -119,6 +186,25 @@ fun SettingsScreen(
                     Switch(
                         checked = vibrationEnabled,
                         onCheckedChange = { viewModel.setVibrationEnabled(it) }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Persistent notification", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Show an ongoing notification to quickly disable the app.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Switch(
+                        checked = persistentNotificationEnabled,
+                        onCheckedChange = { viewModel.setPersistentNotificationEnabled(it) }
                     )
                 }
             }

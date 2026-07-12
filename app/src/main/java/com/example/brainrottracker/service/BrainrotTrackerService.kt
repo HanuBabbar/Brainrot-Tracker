@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
@@ -26,12 +27,28 @@ class BrainrotTrackerService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private lateinit var repository: UsageRepository
     private lateinit var userSettings: UserSettings
+    private lateinit var notificationHelper: NotificationHelper
 
-    private val disableReceiver = object : BroadcastReceiver() {
+    private val actionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == ACTION_DISABLE_SERVICE) {
-                Log.d("BrainrotTracker", "Received disable intent. Disabling self.")
-                disableSelf()
+            when (intent?.action) {
+                ACTION_DISABLE_SERVICE -> {
+                    Log.d("BrainrotTracker", "Received disable intent. Disabling self.")
+                    notificationHelper.showAppDisabledNotification()
+                    disableSelf()
+                }
+                ACTION_NOTIFICATION_DISMISSED -> {
+                    Log.d("BrainrotTracker", "Persistent notification dismissed. Reposting.")
+                    serviceScope.launch {
+                        // Safe to run in serviceScope since it's just a quick read
+                        val enabled = userSettings.persistentNotificationEnabled.first()
+                        if (enabled) {
+                            val notification = notificationHelper.buildPersistentServiceNotification(ACTION_DISABLE_SERVICE, ACTION_NOTIFICATION_DISMISSED)
+                            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                            notificationManager.notify(NotificationHelper.PERSISTENT_NOTIFICATION_ID, notification)
+                        }
+                    }
+                }
             }
         }
     }
@@ -48,6 +65,7 @@ class BrainrotTrackerService : AccessibilityService() {
 
     companion object {
         const val ACTION_DISABLE_SERVICE = "com.example.brainrottracker.ACTION_DISABLE_SERVICE"
+        const val ACTION_NOTIFICATION_DISMISSED = "com.example.brainrottracker.ACTION_NOTIFICATION_DISMISSED"
 
         fun isServiceEnabled(context: Context): Boolean {
             val expectedComponentName = ComponentName(context, BrainrotTrackerService::class.java)
@@ -104,21 +122,37 @@ class BrainrotTrackerService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
 
-        val filter = IntentFilter(ACTION_DISABLE_SERVICE)
-        ContextCompat.registerReceiver(this, disableReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        val filter = IntentFilter().apply {
+            addAction(ACTION_DISABLE_SERVICE)
+            addAction(ACTION_NOTIFICATION_DISMISSED)
+        }
+        ContextCompat.registerReceiver(this, actionReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
         val database = AppDatabase.getDatabase(this)
         userSettings = UserSettings(this)
-        val notificationHelper = NotificationHelper(this)
+        notificationHelper = NotificationHelper(this)
         repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
 
         // Build the engine map from the registry — adding a platform only touches PlatformRegistry
         platforms = PlatformRegistry.build(resources)
 
         serviceScope.launch {
-            userSettings.cpuMode.collect { mode ->
-                currentIntervalMs = mode.intervalMs
-                Log.d("BrainrotTracker", "CPU Mode: ${mode.name} (${mode.intervalMs}ms)")
+            launch {
+                userSettings.cpuMode.collect { mode ->
+                    currentIntervalMs = mode.intervalMs
+                    Log.d("BrainrotTracker", "CPU Mode: ${mode.name} (${mode.intervalMs}ms)")
+                }
+            }
+            launch {
+                userSettings.persistentNotificationEnabled.collect { enabled ->
+                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                    if (enabled) {
+                        val notification = notificationHelper.buildPersistentServiceNotification(ACTION_DISABLE_SERVICE, ACTION_NOTIFICATION_DISMISSED)
+                        notificationManager.notify(NotificationHelper.PERSISTENT_NOTIFICATION_ID, notification)
+                    } else {
+                        notificationManager.cancel(NotificationHelper.PERSISTENT_NOTIFICATION_ID)
+                    }
+                }
             }
         }
 
@@ -127,6 +161,8 @@ class BrainrotTrackerService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(disableReceiver)
+        unregisterReceiver(actionReceiver)
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        notificationManager.cancel(NotificationHelper.PERSISTENT_NOTIFICATION_ID)
     }
 }
