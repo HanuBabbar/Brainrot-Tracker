@@ -50,9 +50,7 @@ class UsageRepository(
         }
         
         // Update widgets whenever data changes
-        notificationHelper.getContext().let { context ->
-            BrainrotWidget().updateAll(context)
-        }
+        updateWidgets()
 
         checkLimitAndNotify()
 
@@ -98,6 +96,13 @@ class UsageRepository(
             android.util.Log.d("UsageRepository", "Sync successful: ${response.status}")
         } catch (e: Exception) {
             android.util.Log.e("UsageRepository", "Sync failed", e)
+        }
+    }
+
+    suspend fun updateWidgets() {
+        notificationHelper.getContext().let { context ->
+            BrainrotWidget().updateAll(context)
+            com.example.brainrottracker.widget.BrainrotMeterWidget().updateAll(context)
         }
     }
 }

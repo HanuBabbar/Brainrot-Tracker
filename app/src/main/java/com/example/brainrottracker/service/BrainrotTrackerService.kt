@@ -49,6 +49,14 @@ class BrainrotTrackerService : AccessibilityService() {
                         }
                     }
                 }
+                Intent.ACTION_DATE_CHANGED,
+                Intent.ACTION_TIME_CHANGED,
+                Intent.ACTION_TIMEZONE_CHANGED -> {
+                    Log.d("BrainrotTracker", "Time changed. Updating widgets.")
+                    serviceScope.launch {
+                        repository.updateWidgets()
+                    }
+                }
             }
         }
     }
@@ -125,6 +133,9 @@ class BrainrotTrackerService : AccessibilityService() {
         val filter = IntentFilter().apply {
             addAction(ACTION_DISABLE_SERVICE)
             addAction(ACTION_NOTIFICATION_DISMISSED)
+            addAction(Intent.ACTION_DATE_CHANGED)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
         }
         ContextCompat.registerReceiver(this, actionReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
