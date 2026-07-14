@@ -26,6 +26,8 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.Button
+import androidx.glance.ButtonDefaults
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -108,20 +110,18 @@ class BrainrotMeterWidget : GlanceAppWidget() {
                 )
             )
             Spacer(modifier = GlanceModifier.height(12.dp))
-            Row(
-                modifier = GlanceModifier
-                    .fillMaxWidth()
-                    .background(if (strictMode) Color(0xFFEF4444) else Color(0xFF6B7280))
-                    .padding(8.dp)
-                    .clickable(actionRunCallback<ToggleStrictModeAction>()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (strictMode) "Strict Mode: ON" else "Strict Mode: OFF",
-                    style = TextStyle(color = ColorProvider(day = Color.White, night = Color.White), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                )
-            }
+            Button(
+                text = if (strictMode) "Strict Mode: ON" else "Strict Mode: OFF",
+                onClick = actionRunCallback<ToggleStrictModeAction>(),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = ColorProvider(
+                        day = if (strictMode) Color(0xFFEF4444) else Color(0xFF6B7280),
+                        night = if (strictMode) Color(0xFFEF4444) else Color(0xFF6B7280)
+                    ),
+                    contentColor = ColorProvider(day = Color.White, night = Color.White)
+                ),
+                modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
+            )
         }
     }
 }
