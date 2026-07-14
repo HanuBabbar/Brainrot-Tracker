@@ -51,18 +51,17 @@ fun DashboardScreen(
     val stats         by viewModel.todayStats.collectAsState()
     val yesterday     by viewModel.yesterdayStats.collectAsState()
     val dailyLimit    by viewModel.dailyLimit.collectAsState()
+    val isPerfectWeek by viewModel.isPerfectWeek.collectAsState()
 
     val totalToday = stats.values.sumOf { it }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Brainrot Tracker") },
-                navigationIcon = {
-                    IconButton(onClick = onMenuClick) {
-                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
-                    }
-                }
+                title = { Text("Brainrot Tracker", fontWeight = FontWeight.Black) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                )
             )
         }
     ) { padding ->
@@ -76,6 +75,22 @@ fun DashboardScreen(
         ) {
             // ── Hero ring ──────────────────────────────────────────────
             DailyProgressHero(total = totalToday, limit = dailyLimit)
+
+            if (isPerfectWeek) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("🔥 7-Day Perfect Streak!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    }
+                }
+            }
 
             // ── Platform cards ─────────────────────────────────────────
             Text(

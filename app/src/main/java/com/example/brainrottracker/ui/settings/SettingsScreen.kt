@@ -37,6 +37,7 @@ fun SettingsScreen(
     val cpuMode by viewModel.cpuMode.collectAsState()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsState()
     val persistentNotificationEnabled by viewModel.persistentNotificationEnabled.collectAsState()
+    val strictModeEnabled by viewModel.strictModeEnabled.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     
     val userName by viewModel.userName.collectAsState()
@@ -63,12 +64,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
-                    }
-                }
+                title = { Text("Settings") }
             )
         }
     ) { padding ->
@@ -158,6 +154,25 @@ fun SettingsScreen(
                     label = { Text("Max Swipes (1-1000)") },
                     singleLine = true
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Strict Mode (App Blocking)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
+                        Text(
+                            "Automatically take you to the Home screen when you exceed your daily limit.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Switch(
+                        checked = strictModeEnabled,
+                        onCheckedChange = { viewModel.setStrictModeEnabled(it) }
+                    )
+                }
             }
 
             HorizontalDivider()

@@ -121,7 +121,13 @@ class BrainrotTrackerService : AccessibilityService() {
 
     private fun saveSwipe(platformDisplayName: String) {
         serviceScope.launch {
-            repository.incrementUsage(platformDisplayName)
+            val shouldBlock = repository.incrementUsage(platformDisplayName)
+            if (shouldBlock) {
+                launch(Dispatchers.Main) {
+                    android.widget.Toast.makeText(this@BrainrotTrackerService, "Strict Mode: Daily Limit Exceeded!", android.widget.Toast.LENGTH_LONG).show()
+                }
+                performGlobalAction(GLOBAL_ACTION_HOME)
+            }
         }
     }
 

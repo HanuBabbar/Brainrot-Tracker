@@ -27,6 +27,7 @@ class UserSettings(private val context: Context) {
         private val VIBRATION_ENABLED_KEY = booleanPreferencesKey("vibration_enabled")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val PERSISTENT_NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("persistent_notification_enabled")
+        private val STRICT_MODE_ENABLED_KEY = booleanPreferencesKey("strict_mode_enabled")
     }
 
     suspend fun setAuthMode(mode: AuthMode) {
@@ -95,6 +96,12 @@ class UserSettings(private val context: Context) {
         }
     }
 
+    suspend fun setStrictModeEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[STRICT_MODE_ENABLED_KEY] = enabled
+        }
+    }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { prefs ->
             prefs[THEME_MODE_KEY] = mode.name
@@ -145,6 +152,10 @@ class UserSettings(private val context: Context) {
 
     val persistentNotificationEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[PERSISTENT_NOTIFICATION_ENABLED_KEY] ?: false // Default to false
+    }
+
+    val strictModeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[STRICT_MODE_ENABLED_KEY] ?: false // Default to false
     }
 
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->

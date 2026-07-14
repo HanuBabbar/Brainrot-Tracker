@@ -33,7 +33,7 @@ class UsageRepository(
         return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
     }
 
-    suspend fun incrementUsage(platform: String) {
+    suspend fun incrementUsage(platform: String): Boolean {
         val date = getTodayDate()
         val existingUsage = usageDao.getUsageByDate(date, platform)
 
@@ -58,6 +58,11 @@ class UsageRepository(
         if (userSettings.userId.first() != null) {
             syncData()
         }
+
+        val strictModeEnabled = userSettings.strictModeEnabled.first()
+        val limit = userSettings.dailyLimit.first()
+        val totalCount = usageDao.getTotalCountForDateSync(date) ?: 0
+        return strictModeEnabled && totalCount >= limit
     }
 
     private suspend fun checkLimitAndNotify() {

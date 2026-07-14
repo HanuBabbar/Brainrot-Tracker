@@ -12,8 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
-import com.example.brainrottracker.ui.dashboard.SidebarHeader
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -112,10 +118,7 @@ fun AppRoot(
         }
     }
 
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val friendCode by appViewModel.friendCode.collectAsState()
-    val userName by appViewModel.userName.collectAsState()
 
     // Live check for accessibility permission
     var isPermissionGranted by remember {
@@ -155,98 +158,81 @@ fun AppRoot(
             if (!isPermissionGranted) {
                 PermissionScreen()
             } else {
-                ModalNavigationDrawer(
-                    drawerState = drawerState,
-                    drawerContent = {
-                        ModalDrawerSheet {
-                            SidebarHeader(
-                                authMode   = authMode,
-                                friendCode = friendCode,
-                                userName   = userName,
-                                onLoginClick = {
-                                    scope.launch { drawerState.close() }
-                                    currentScreen = Screen.Login
-                                }
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            NavigationDrawerItem(
-                                label    = { Text("Dashboard") },
+                Scaffold(
+                    bottomBar = {
+                        NavigationBar {
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Home, contentDescription = "Dashboard") },
+                                label = { Text("Home", maxLines = 1) },
                                 selected = currentScreen is Screen.Dashboard,
-                                onClick  = { scope.launch { drawerState.close() }; currentScreen = Screen.Dashboard },
-                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                onClick = { currentScreen = Screen.Dashboard }
                             )
-                            NavigationDrawerItem(
-                                label    = { Text("Weekly Usage") },
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.DateRange, contentDescription = "Stats") },
+                                label = { Text("Stats", maxLines = 1) },
                                 selected = currentScreen is Screen.WeeklyUsage,
-                                onClick  = { scope.launch { drawerState.close() }; currentScreen = Screen.WeeklyUsage },
-                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                onClick = { currentScreen = Screen.WeeklyUsage }
                             )
-                            NavigationDrawerItem(
-                                label    = { Text("Friends") },
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Person, contentDescription = "Friends") },
+                                label = { Text("Friends", maxLines = 1) },
                                 selected = currentScreen is Screen.Friends,
-                                onClick  = { scope.launch { drawerState.close() }; friendsViewModel.loadFriends(); currentScreen = Screen.Friends },
-                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                onClick = { friendsViewModel.loadFriends(); currentScreen = Screen.Friends }
                             )
-                            NavigationDrawerItem(
-                                label    = { Text("Leaderboard") },
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Star, contentDescription = "Leaderboard") },
+                                label = { Text("Ranks", maxLines = 1) },
                                 selected = currentScreen is Screen.Leaderboard,
-                                onClick  = { scope.launch { drawerState.close() }; leaderboardViewModel.refresh(); currentScreen = Screen.Leaderboard },
-                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                onClick = { leaderboardViewModel.refresh(); currentScreen = Screen.Leaderboard }
                             )
-                            NavigationDrawerItem(
-                                label    = { Text("Settings") },
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                label = { Text("Settings", maxLines = 1) },
                                 selected = currentScreen is Screen.Settings,
-                                onClick  = { scope.launch { drawerState.close() }; currentScreen = Screen.Settings },
-                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                onClick = { currentScreen = Screen.Settings }
                             )
-                            if (authMode != AuthMode.UNKNOWN) {
-                                NavigationDrawerItem(
-                                    label    = { Text("Logout", color = MaterialTheme.colorScheme.error) },
-                                    selected = false,
-                                    onClick  = { scope.launch { drawerState.close(); appViewModel.logout() } },
-                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                                )
-                            }
                         }
                     }
-                ) {
-                    when (currentScreen) {
-                        is Screen.Dashboard -> {
-                            DashboardScreen(
-                                viewModel = dashboardViewModel,
-                                onMenuClick = { scope.launch { drawerState.open() } },
-                            )
-                        }
-                        is Screen.WeeklyUsage -> {
-                            WeeklyUsageScreen(
-                                viewModel = weeklyUsageViewModel,
-                                onNavigateBack = { scope.launch { drawerState.open() } }
-                            )
-                        }
-                        is Screen.Settings -> {
-                            SettingsScreen(
-                                viewModel = settingsViewModel,
-                                onNavigateBack = { scope.launch { drawerState.open() } }
-                            )
-                        }
-                        is Screen.Login -> {
-                            LoginScreen(
-                                viewModel = loginViewModel,
-                                onNavigateBack = { currentScreen = Screen.Dashboard },
-                                onLoginSuccess = { currentScreen = Screen.Dashboard }
-                            )
-                        }
-                        is Screen.Friends -> {
-                            FriendsScreen(
-                                viewModel = friendsViewModel,
-                                onNavigateBack = { scope.launch { drawerState.open() } },
-                            )
-                        }
-                        is Screen.Leaderboard -> {
-                            LeaderboardScreen(
-                                viewModel = leaderboardViewModel,
-                                onNavigateBack = { scope.launch { drawerState.open() } },
-                            )
+                ) { paddingValues ->
+                    Box(modifier = Modifier.padding(paddingValues)) {
+                        when (currentScreen) {
+                            is Screen.Dashboard -> {
+                                DashboardScreen(
+                                    viewModel = dashboardViewModel,
+                                    onMenuClick = { /* No-op */ },
+                                )
+                            }
+                            is Screen.WeeklyUsage -> {
+                                WeeklyUsageScreen(
+                                    viewModel = weeklyUsageViewModel,
+                                    onNavigateBack = { currentScreen = Screen.Dashboard }
+                                )
+                            }
+                            is Screen.Settings -> {
+                                SettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    onNavigateBack = { currentScreen = Screen.Dashboard }
+                                )
+                            }
+                            is Screen.Login -> {
+                                LoginScreen(
+                                    viewModel = loginViewModel,
+                                    onNavigateBack = { currentScreen = Screen.Dashboard },
+                                    onLoginSuccess = { currentScreen = Screen.Dashboard }
+                                )
+                            }
+                            is Screen.Friends -> {
+                                FriendsScreen(
+                                    viewModel = friendsViewModel,
+                                    onNavigateBack = { currentScreen = Screen.Dashboard },
+                                )
+                            }
+                            is Screen.Leaderboard -> {
+                                LeaderboardScreen(
+                                    viewModel = leaderboardViewModel,
+                                    onNavigateBack = { currentScreen = Screen.Dashboard },
+                                )
+                            }
                         }
                     }
                 }

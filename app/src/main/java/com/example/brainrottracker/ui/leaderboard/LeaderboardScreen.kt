@@ -37,11 +37,6 @@ fun LeaderboardScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Leaderboard", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
-                    }
-                },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")

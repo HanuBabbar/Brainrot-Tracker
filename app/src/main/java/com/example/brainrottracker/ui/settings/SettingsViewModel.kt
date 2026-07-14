@@ -46,6 +46,9 @@ class SettingsViewModel(
     val persistentNotificationEnabled: StateFlow<Boolean> = userSettings.persistentNotificationEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val strictModeEnabled: StateFlow<Boolean> = userSettings.strictModeEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val themeMode: StateFlow<ThemeMode> = userSettings.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
@@ -70,6 +73,12 @@ class SettingsViewModel(
     fun setPersistentNotificationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userSettings.setPersistentNotificationEnabled(enabled)
+        }
+    }
+
+    fun setStrictModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSettings.setStrictModeEnabled(enabled)
         }
     }
 
