@@ -14,6 +14,9 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +35,8 @@ fun LeaderboardScreen(
     onNavigateBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val pagerState = rememberPagerState(pageCount = { LeaderboardTab.entries.size })
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -62,7 +67,7 @@ fun LeaderboardScreen(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
                 LeaderboardTab.entries.forEach { tab ->
-                    val isSelected = state.tab == tab
+                    val isSelected = pagerState.currentPage == tab.ordinal
                     val bgColor by animateColorAsState(
                         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                         animationSpec = tween(200),
@@ -81,7 +86,7 @@ fun LeaderboardScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         TextButton(
-                            onClick = { viewModel.switchTab(tab) },
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(tab.ordinal) } },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
@@ -106,62 +111,72 @@ fun LeaderboardScreen(
                 )
             }
 
-            // My rank banner
-            val myRank = state.myRank
-            if (myRank != null && myRank > 0) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    )
-                ) {
-                    Text(
-                        "Your rank: #$myRank",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val isLoading = if (page == 0) state.isLoadingGlobal else state.isLoadingFriends
+                val error = if (page == 0) state.errorGlobal else state.errorFriends
+                val myRank = if (page == 0) state.globalMyRank else state.friendsMyRank
+                val entries = if (page == 0) state.globalEntries else state.friendsEntries
+
+                LeaderboardPageContent(
+                    isLoading = isLoading,
+                    error = error,
+                    entries = entries,
+                    myRank = myRank
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LeaderboardPageContent(
+    isLoading: Boolean,
+    error: String?,
+    entries: List<LeaderboardEntry>,
+    myRank: Int?
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (myRank != null && myRank > 0) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                )
+            ) {
+                Text(
+                    "Your rank: #$myRank",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+
+        when {
+            isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
-
-
-            when {
-                state.isLoading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+            error != null -> {
+                Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text(error, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error)
                 }
-                state.error != null -> {
-                    Box(
-                        Modifier.fillMaxSize().padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            state.error!!,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
+            }
+            entries.isEmpty() -> {
+                Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text("No data yet for today.\nScroll some brainrot and come back! 🤙", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.outline)
                 }
-                state.entries.isEmpty() -> {
-                    Box(
-                        Modifier.fillMaxSize().padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "No data yet for today.\nScroll some brainrot and come back! 🤙",
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                    }
-                }
-                else -> {
-                    LeaderboardList(entries = state.entries)
-                }
+            }
+            else -> {
+                LeaderboardList(entries = entries)
             }
         }
     }

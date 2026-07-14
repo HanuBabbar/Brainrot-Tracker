@@ -14,12 +14,15 @@ import kotlinx.coroutines.launch
 enum class LeaderboardTab { GLOBAL, FRIENDS }
 
 data class LeaderboardUiState(
-    val tab: LeaderboardTab = LeaderboardTab.GLOBAL,
-    val entries: List<LeaderboardEntry> = emptyList(),
-    val myRank: Int? = null,
+    val globalEntries: List<LeaderboardEntry> = emptyList(),
+    val friendsEntries: List<LeaderboardEntry> = emptyList(),
+    val globalMyRank: Int? = null,
+    val friendsMyRank: Int? = null,
     val date: String = "",
-    val isLoading: Boolean = false,
-    val error: String? = null,
+    val isLoadingGlobal: Boolean = false,
+    val isLoadingFriends: Boolean = false,
+    val errorGlobal: String? = null,
+    val errorFriends: String? = null,
 )
 
 class LeaderboardViewModel(private val userSettings: UserSettings) : ViewModel() {
@@ -29,40 +32,31 @@ class LeaderboardViewModel(private val userSettings: UserSettings) : ViewModel()
 
     init {
         loadGlobal()
-    }
-
-    fun switchTab(tab: LeaderboardTab) {
-        _uiState.value = _uiState.value.copy(tab = tab)
-        when (tab) {
-            LeaderboardTab.GLOBAL -> loadGlobal()
-            LeaderboardTab.FRIENDS -> loadFriends()
-        }
+        loadFriends()
     }
 
     fun refresh() {
-        when (_uiState.value.tab) {
-            LeaderboardTab.GLOBAL -> loadGlobal()
-            LeaderboardTab.FRIENDS -> loadFriends()
-        }
+        loadGlobal()
+        loadFriends()
     }
 
     private fun loadGlobal() {
         viewModelScope.launch {
             val userId = userSettings.userId.first()
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoadingGlobal = true, errorGlobal = null)
             LeaderboardApiService.getGlobalLeaderboard(userId).fold(
                 onSuccess = { response ->
                     _uiState.value = _uiState.value.copy(
-                        entries = response.leaderboard,
-                        myRank = response.myRank,
-                        date = response.date,
-                        isLoading = false,
+                        globalEntries = response.leaderboard,
+                        globalMyRank = response.myRank,
+                        date = response.date.ifEmpty { _uiState.value.date },
+                        isLoadingGlobal = false,
                     )
                 },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Could not load leaderboard: ${e.message}",
+                        isLoadingGlobal = false,
+                        errorGlobal = "Could not load global leaderboard: ${e.message}",
                     )
                 }
             )
@@ -73,25 +67,25 @@ class LeaderboardViewModel(private val userSettings: UserSettings) : ViewModel()
         viewModelScope.launch {
             val userId = userSettings.userId.first() ?: run {
                 _uiState.value = _uiState.value.copy(
-                    error = "Log in to see your friends leaderboard",
-                    isLoading = false,
+                    errorFriends = "Log in to see your friends leaderboard",
+                    isLoadingFriends = false,
                 )
                 return@launch
             }
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoadingFriends = true, errorFriends = null)
             LeaderboardApiService.getFriendsLeaderboard(userId).fold(
                 onSuccess = { response ->
                     _uiState.value = _uiState.value.copy(
-                        entries = response.leaderboard,
-                        myRank = response.myRank,
-                        date = response.date,
-                        isLoading = false,
+                        friendsEntries = response.leaderboard,
+                        friendsMyRank = response.myRank,
+                        date = response.date.ifEmpty { _uiState.value.date },
+                        isLoadingFriends = false,
                     )
                 },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Could not load leaderboard: ${e.message}",
+                        isLoadingFriends = false,
+                        errorFriends = "Could not load friends leaderboard: ${e.message}",
                     )
                 }
             )
