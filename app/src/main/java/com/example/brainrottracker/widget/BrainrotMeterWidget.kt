@@ -14,6 +14,10 @@ import androidx.glance.GlanceTheme
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.action.ActionParameters
+import kotlinx.coroutines.flow.first
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -59,15 +63,16 @@ class BrainrotMeterWidget : GlanceAppWidget() {
         provideContent {
             val count by repository.getTodayTotal().collectAsState(initial = 0)
             val limit by userSettings.dailyLimit.collectAsState(initial = 100)
+            val strictMode by userSettings.strictModeEnabled.collectAsState(initial = false)
             
             GlanceTheme {
-                WidgetContent(count ?: 0, limit)
+                WidgetContent(count ?: 0, limit, strictMode)
             }
         }
     }
 
     @androidx.compose.runtime.Composable
-    private fun WidgetContent(count: Int, limit: Int) {
+    private fun WidgetContent(count: Int, limit: Int, strictMode: Boolean) {
         val progress = if (limit > 0) (count.toFloat() / limit).coerceIn(0f, 1f) else 0f
         
         Column(
@@ -102,7 +107,35 @@ class BrainrotMeterWidget : GlanceAppWidget() {
                     night = Color.Gray.copy(alpha = 0.3f)
                 )
             )
+            Spacer(modifier = GlanceModifier.height(12.dp))
+            Row(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .background(if (strictMode) Color(0xFFEF4444) else Color(0xFF6B7280))
+                    .padding(8.dp)
+                    .clickable(actionRunCallback<ToggleStrictModeAction>()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (strictMode) "Strict Mode: ON" else "Strict Mode: OFF",
+                    style = TextStyle(color = ColorProvider(day = Color.White, night = Color.White), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                )
+            }
         }
+    }
+}
+
+class ToggleStrictModeAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        val userSettings = UserSettings(context)
+        val currentState = userSettings.strictModeEnabled.first()
+        userSettings.setStrictModeEnabled(!currentState)
+        BrainrotMeterWidget().update(context, glanceId)
     }
 }
 

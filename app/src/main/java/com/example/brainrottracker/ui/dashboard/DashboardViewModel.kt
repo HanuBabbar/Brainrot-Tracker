@@ -45,4 +45,13 @@ class DashboardViewModel(
     /** The user's configured daily swipe limit. */
     val dailyLimit: StateFlow<Int> = userSettings.dailyLimit
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100)
+
+    /** Perfect week streak badge logic (true if no day in the last 7 days breached the limit) */
+    val isPerfectWeek: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(repository.getWeekly(), userSettings.dailyLimit) { list, limit ->
+        // list contains usage entities for the last 7 days
+        val breached = list.groupBy { it.date }.any { (_, entries) ->
+            entries.sumOf { it.count } >= limit
+        }
+        !breached
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 }

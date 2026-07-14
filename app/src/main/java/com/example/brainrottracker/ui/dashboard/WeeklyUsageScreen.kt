@@ -56,12 +56,7 @@ fun WeeklyUsageScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Weekly Usage") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
-                    }
-                }
+                title = { Text("Weekly Usage", fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->
