@@ -30,17 +30,39 @@ class LeaderboardViewModel(private val userSettings: UserSettings) : ViewModel()
     private val _uiState = MutableStateFlow(LeaderboardUiState())
     val uiState: StateFlow<LeaderboardUiState> = _uiState.asStateFlow()
 
+    private var lastGlobalRefreshTime = 0L
+    private var lastFriendsRefreshTime = 0L
+
     init {
         loadGlobal()
         loadFriends()
     }
 
     fun refresh() {
+        lastGlobalRefreshTime = 0L
+        lastFriendsRefreshTime = 0L
         loadGlobal()
         loadFriends()
     }
 
+    fun onTabSelected(tab: LeaderboardTab) {
+        val now = System.currentTimeMillis()
+        when (tab) {
+            LeaderboardTab.GLOBAL -> {
+                if (now - lastGlobalRefreshTime > 10_000) {
+                    loadGlobal()
+                }
+            }
+            LeaderboardTab.FRIENDS -> {
+                if (now - lastFriendsRefreshTime > 10_000) {
+                    loadFriends()
+                }
+            }
+        }
+    }
+
     private fun loadGlobal() {
+        lastGlobalRefreshTime = System.currentTimeMillis()
         viewModelScope.launch {
             val userId = userSettings.userId.first()
             _uiState.value = _uiState.value.copy(isLoadingGlobal = true, errorGlobal = null)
@@ -64,6 +86,7 @@ class LeaderboardViewModel(private val userSettings: UserSettings) : ViewModel()
     }
 
     private fun loadFriends() {
+        lastFriendsRefreshTime = System.currentTimeMillis()
         viewModelScope.launch {
             val userId = userSettings.userId.first() ?: run {
                 _uiState.value = _uiState.value.copy(
