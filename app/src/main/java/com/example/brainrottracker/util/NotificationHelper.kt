@@ -19,6 +19,8 @@ class NotificationHelper(private val context: Context) {
         private const val NOTIFICATION_ID = 1001
         const val PERSISTENT_NOTIFICATION_ID = 1002
         private const val DISABLED_NOTIFICATION_ID = 1003
+        private const val FRIEND_REQUEST_CHANNEL_ID = "friend_request_channel"
+        private const val FRIEND_REQUEST_NOTIFICATION_ID = 1004
     }
 
     init {
@@ -42,11 +44,41 @@ class NotificationHelper(private val context: Context) {
                 description = serviceDesc
                 enableVibration(false)
             }
+
+            val friendReqName = "Friend Requests"
+            val friendReqDesc = "Notifications for incoming friend requests"
+            val friendReqImportance = NotificationManager.IMPORTANCE_DEFAULT
+            val friendReqChannel = NotificationChannel(FRIEND_REQUEST_CHANNEL_ID, friendReqName, friendReqImportance).apply {
+                description = friendReqDesc
+                enableVibration(true)
+            }
             
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
             notificationManager.createNotificationChannel(serviceChannel)
+            notificationManager.createNotificationChannel(friendReqChannel)
         }
+    }
+
+    fun sendFriendRequestNotification(friendName: String) {
+        val intent = android.content.Intent(context, Class.forName("com.example.brainrottracker.MainActivity")).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            context, 0, intent, android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, FRIEND_REQUEST_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("New Friend Request! 🤝")
+            .setContentText("$friendName sent you a friend request.")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Use a unique ID based on the friend's name hash to allow multiple notifications
+        notificationManager.notify(FRIEND_REQUEST_NOTIFICATION_ID + friendName.hashCode(), builder.build())
     }
 
     fun sendLimitReachedNotification(currentCount: Int, vibrate: Boolean) {

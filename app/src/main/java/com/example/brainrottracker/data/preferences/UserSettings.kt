@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -28,6 +29,7 @@ class UserSettings(private val context: Context) {
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val PERSISTENT_NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("persistent_notification_enabled")
         private val STRICT_MODE_ENABLED_KEY = booleanPreferencesKey("strict_mode_enabled")
+        private val NOTIFIED_FRIEND_REQUESTS_KEY = stringSetPreferencesKey("notified_friend_requests")
     }
 
     suspend fun setAuthMode(mode: AuthMode) {
@@ -108,6 +110,19 @@ class UserSettings(private val context: Context) {
         }
     }
 
+    suspend fun addNotifiedFriendRequest(friendId: String) {
+        context.dataStore.edit { prefs ->
+            val currentSet = prefs[NOTIFIED_FRIEND_REQUESTS_KEY] ?: emptySet()
+            prefs[NOTIFIED_FRIEND_REQUESTS_KEY] = currentSet + friendId
+        }
+    }
+
+    suspend fun clearNotifiedFriendRequests() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(NOTIFIED_FRIEND_REQUESTS_KEY)
+        }
+    }
+
     val authMode: Flow<AuthMode> = context.dataStore.data.map { prefs ->
         val stored = prefs[AUTH_MODE_KEY]
         try {
@@ -165,5 +180,9 @@ class UserSettings(private val context: Context) {
         } catch (e: IllegalArgumentException) {
             ThemeMode.SYSTEM
         }
+    }
+
+    val notifiedFriendRequests: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        prefs[NOTIFIED_FRIEND_REQUESTS_KEY] ?: emptySet()
     }
 }
