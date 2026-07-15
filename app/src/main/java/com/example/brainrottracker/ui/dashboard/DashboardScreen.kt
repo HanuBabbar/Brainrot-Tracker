@@ -25,19 +25,22 @@ import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.ui.AppViewModel
 import kotlinx.coroutines.launch
 
+import androidx.compose.ui.res.painterResource
+import com.example.brainrottracker.R
+
 // ── Platform metadata ──────────────────────────────────────────────────────────
 
 private data class PlatformMeta(
     val key: String,
     val label: String,
-    val emoji: String,
+    val iconResId: Int,
     val color: Color
 )
 
 private val PLATFORMS = listOf(
-    PlatformMeta("Instagram", "Instagram Reels", "📸", InstagramColor),
-    PlatformMeta("YouTube",   "YouTube Shorts",  "▶",  YouTubeColor),
-    PlatformMeta("TikTok",   "TikTok",           "🎵", TikTokColor)
+    PlatformMeta("Instagram", "Instagram Reels", R.drawable.ic_instagram, InstagramColor),
+    PlatformMeta("YouTube",   "YouTube Shorts",  R.drawable.ic_youtube,  YouTubeColor),
+    PlatformMeta("TikTok",   "TikTok",           R.drawable.ic_tiktok, TikTokColor)
 )
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -271,7 +274,12 @@ private fun PlatformCard(
                 verticalAlignment      = Alignment.CenterVertically,
                 horizontalArrangement  = Arrangement.Center
             ) {
-                Text(meta.emoji, fontSize = 16.sp)
+                Icon(
+                    painter = painterResource(id = meta.iconResId),
+                    contentDescription = meta.label,
+                    modifier = Modifier.size(16.dp),
+                    tint = meta.color
+                )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text  = meta.label,
