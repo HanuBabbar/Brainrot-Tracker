@@ -24,6 +24,14 @@ import androidx.compose.ui.unit.sp
 import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.ui.AppViewModel
 import kotlinx.coroutines.launch
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.ContentCopy
 
 import androidx.compose.ui.res.painterResource
 import com.example.brainrottracker.R
@@ -55,6 +63,10 @@ fun DashboardScreen(
     val yesterday     by viewModel.yesterdayStats.collectAsState()
     val dailyLimit    by viewModel.dailyLimit.collectAsState()
     val isPerfectWeek by viewModel.isPerfectWeek.collectAsState()
+    val userName      by viewModel.userName.collectAsState()
+    val friendCode    by viewModel.friendCode.collectAsState()
+    
+    val context = LocalContext.current
 
     val totalToday = stats.values.sumOf { it }
 
@@ -76,6 +88,11 @@ fun DashboardScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // ── Welcome / Friend Code Badge ────────────────────────────
+            if (userName != null && friendCode != null) {
+                FriendCodeBadge(userName = userName!!, friendCode = friendCode!!, context = context)
+            }
+
             // ── Hero ring ──────────────────────────────────────────────
             DailyProgressHero(total = totalToday, limit = dailyLimit)
 
@@ -133,6 +150,51 @@ fun DashboardScreen(
             ContextualMessage(total = totalToday, limit = dailyLimit)
 
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+// ── Welcome / Friend Code Badge ───────────────────────────────────────────────
+
+@Composable
+private fun FriendCodeBadge(userName: String, friendCode: String, context: Context) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Friend Code", friendCode)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(context, "Friend code copied!", Toast.LENGTH_SHORT).show()
+            }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text("Hey $userName 👋", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    text = "Tap to share code: $friendCode", 
+                    style = MaterialTheme.typography.bodySmall, 
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                )
+            }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    Icons.Default.ContentCopy,
+                    contentDescription = "Copy code",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
         }
     }
 }
