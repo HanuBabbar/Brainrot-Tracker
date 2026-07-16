@@ -32,6 +32,9 @@ class SettingsViewModel(
     val userId: StateFlow<String?> = userSettings.userId
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val authMode: StateFlow<AuthMode> = userSettings.authMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AuthMode.UNKNOWN)
+
     val userName: StateFlow<String?> = userSettings.userName
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 

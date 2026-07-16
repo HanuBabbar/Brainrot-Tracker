@@ -108,6 +108,7 @@ fun AppRoot(
     val context = LocalContext.current
     val authMode by appViewModel.authMode.collectAsState()
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
+    var previousScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
 
     // Request Notification Permission for Android 13+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -217,7 +218,11 @@ fun AppRoot(
                                 SettingsScreen(
                                     viewModel = settingsViewModel,
                                     onNavigateBack = { currentScreen = Screen.Dashboard },
-                                    onNavigateToProfile = { currentScreen = Screen.Profile }
+                                    onNavigateToProfile = { currentScreen = Screen.Profile },
+                                    onNavigateToLogin = {
+                                        previousScreen = Screen.Settings
+                                        currentScreen = Screen.Login
+                                    }
                                 )
                             }
                             is Screen.Profile -> {
@@ -229,8 +234,8 @@ fun AppRoot(
                             is Screen.Login -> {
                                 LoginScreen(
                                     viewModel = loginViewModel,
-                                    onNavigateBack = { currentScreen = Screen.Dashboard },
-                                    onLoginSuccess = { currentScreen = Screen.Dashboard }
+                                    onNavigateBack = { currentScreen = previousScreen },
+                                    onLoginSuccess = { currentScreen = previousScreen }
                                 )
                             }
                             is Screen.Friends -> {
