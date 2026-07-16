@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -31,7 +33,8 @@ import com.example.brainrottracker.service.BrainrotTrackerService
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToProfile: () -> Unit
 ) {
     val dailyLimit by viewModel.dailyLimit.collectAsState()
     val cpuMode by viewModel.cpuMode.collectAsState()
@@ -76,48 +79,48 @@ fun SettingsScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(32.dp)
         ) {
-            // Profile Section
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Profile",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
+            // Profile Link Section
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToProfile() },
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.medium
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("Display Name") },
-                        singleLine = true
-                    )
-
-                    Button(
-                        onClick = { viewModel.updateUserName(nameInput) },
-                        enabled = nameInput.isNotBlank() && nameInput != userName && updateNameState !is SettingsViewModel.UiState.Loading,
-                        modifier = Modifier.height(56.dp) // Match height of OutlinedTextField
-                    ) {
-                        if (updateNameState is SettingsViewModel.UiState.Loading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(8.dp)
                             )
-                        } else {
-                            Text("Save")
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Your Profile", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Name, Friend Code, Log Out",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Go to Profile",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                Text(
-                    text = "This name will be shown on the leaderboard.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
             }
             
             HorizontalDivider()

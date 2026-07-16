@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.brainrottracker.data.preferences.CPUMode
 import com.example.brainrottracker.data.preferences.ThemeMode
+import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.data.preferences.UserSettings
 import com.example.brainrottracker.data.remote.ProfileApiService
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,6 +33,9 @@ class SettingsViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val userName: StateFlow<String?> = userSettings.userName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val friendCode: StateFlow<String?> = userSettings.friendCode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val dailyLimit: StateFlow<Int> = userSettings.dailyLimit
@@ -115,5 +119,14 @@ class SettingsViewModel(
     
     fun resetUpdateNameState() {
         _updateNameState.value = UiState.Idle
+    }
+    
+    fun logout() {
+        viewModelScope.launch {
+            userSettings.setUserId(null)
+            userSettings.setFriendCode(null)
+            userSettings.setUserName(null)
+            userSettings.setAuthMode(AuthMode.UNKNOWN)
+        }
     }
 }

@@ -74,7 +74,7 @@ class BrainrotWidget : GlanceAppWidget() {
             Text(
                 text = "Brainrot",
                 style = TextStyle(
-                    color = WidgetTextColor,
+                    color = WidgetTextColor, 
                     fontSize = 10.sp
                 )
             )

@@ -48,6 +48,7 @@ import com.example.brainrottracker.ui.login.LoginScreen
 import com.example.brainrottracker.ui.login.LoginViewModel
 import com.example.brainrottracker.ui.settings.SettingsScreen
 import com.example.brainrottracker.ui.settings.SettingsViewModel
+import com.example.brainrottracker.ui.settings.ProfileScreen
 import com.example.brainrottracker.ui.theme.BrainrotTrackerTheme
 import com.example.brainrottracker.util.NotificationHelper
 import com.example.brainrottracker.data.preferences.ThemeMode
@@ -215,7 +216,14 @@ fun AppRoot(
                             is Screen.Settings -> {
                                 SettingsScreen(
                                     viewModel = settingsViewModel,
-                                    onNavigateBack = { currentScreen = Screen.Dashboard }
+                                    onNavigateBack = { currentScreen = Screen.Dashboard },
+                                    onNavigateToProfile = { currentScreen = Screen.Profile }
+                                )
+                            }
+                            is Screen.Profile -> {
+                                ProfileScreen(
+                                    viewModel = settingsViewModel,
+                                    onNavigateBack = { currentScreen = Screen.Settings }
                                 )
                             }
                             is Screen.Login -> {
