@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.BackHandler
 import com.example.brainrottracker.data.preferences.CPUMode
 import com.example.brainrottracker.data.preferences.ThemeMode
 import com.example.brainrottracker.data.preferences.AuthMode
@@ -48,6 +49,8 @@ fun SettingsScreen(
     val userName by viewModel.userName.collectAsState()
     val updateNameState by viewModel.updateNameState.collectAsState()
     val authMode by viewModel.authMode.collectAsState()
+
+    BackHandler(onBack = onNavigateBack)
 
     val context = LocalContext.current
     var limitInput by remember(dailyLimit) { mutableStateOf(dailyLimit.toString()) }

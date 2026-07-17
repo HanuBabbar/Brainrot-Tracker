@@ -20,6 +20,7 @@ import android.content.ClipData
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -57,6 +58,9 @@ fun FriendsScreen(
     val friendCode by viewModel.friendCode.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val pagerState = rememberPagerState(pageCount = { 3 })
+    
+    BackHandler(onBack = onNavigateBack)
+
     val coroutineScope = rememberCoroutineScope()
     var searchCode by remember { mutableStateOf("") }
     val context = LocalContext.current

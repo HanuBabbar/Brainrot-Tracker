@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,6 +32,8 @@ fun ProfileScreen(
     val userName by viewModel.userName.collectAsState()
     val friendCode by viewModel.friendCode.collectAsState()
     val updateNameState by viewModel.updateNameState.collectAsState()
+
+    BackHandler(onBack = onNavigateBack)
 
     val context = LocalContext.current
     var nameInput by remember(userName) { mutableStateOf(userName ?: "") }
