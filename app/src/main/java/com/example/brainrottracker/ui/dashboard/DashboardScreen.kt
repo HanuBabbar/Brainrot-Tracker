@@ -1,6 +1,7 @@
 package com.example.brainrottracker.ui.dashboard
 
 import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -45,11 +46,15 @@ private data class PlatformMeta(
     val color: Color
 )
 
-private val PLATFORMS = listOf(
-    PlatformMeta("Instagram", "Instagram Reels", R.drawable.ic_instagram, InstagramColor),
-    PlatformMeta("YouTube",   "YouTube Shorts",  R.drawable.ic_youtube,  YouTubeColor),
-    PlatformMeta("TikTok",   "TikTok",           R.drawable.ic_tiktok, TikTokColor)
-)
+@Composable
+private fun platforms(): List<PlatformMeta> {
+    val accent = MaterialTheme.colorScheme.primary
+    return listOf(
+        PlatformMeta("Instagram", "Instagram Reels", R.drawable.ic_instagram, accent),
+        PlatformMeta("YouTube",   "YouTube Shorts",  R.drawable.ic_youtube,  accent),
+        PlatformMeta("TikTok",   "TikTok",           R.drawable.ic_tiktok,   accent)
+    )
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -124,7 +129,8 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                PLATFORMS.take(2).forEach { meta ->
+                val platformList = platforms()
+                platformList.take(2).forEach { meta ->
                     PlatformCard(
                         meta      = meta,
                         count     = stats[meta.key] ?: 0,
@@ -136,7 +142,7 @@ fun DashboardScreen(
             }
 
             // TikTok full-width
-            PLATFORMS.drop(2).forEach { meta ->
+            platforms().drop(2).forEach { meta ->
                 PlatformCard(
                     meta      = meta,
                     count     = stats[meta.key] ?: 0,
@@ -204,6 +210,7 @@ private fun FriendCodeBadge(userName: String, friendCode: String, context: Conte
 @Composable
 private fun DailyProgressHero(total: Int, limit: Int) {
     val fraction = (total.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
+    val isIdle = total == 0
 
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
@@ -216,12 +223,24 @@ private fun DailyProgressHero(total: Int, limit: Int) {
         label = "count"
     )
 
+    // Idle pulse animation — gently scales the ring up and down when no scrolls
+    val pulseAnim = rememberInfiniteTransition(label = "idle_pulse")
+    val pulseScale by pulseAnim.animateFloat(
+        initialValue = 1f,
+        targetValue  = if (isIdle) 1.05f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+
     val ringColor1 = MaterialTheme.colorScheme.primary
     val ringColor2 = MaterialTheme.colorScheme.tertiary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
 
     val statusText = when {
-        fraction == 0f        -> "Start tracking 👀"
+        fraction == 0f        -> "You're clean today! 🌿"
         fraction < 0.4f       -> "Looking good 🌿"
         fraction < 0.7f       -> "Getting there 🔥"
         fraction < 1f         -> "Almost at limit ⚠️"
@@ -234,7 +253,10 @@ private fun DailyProgressHero(total: Int, limit: Int) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Canvas(modifier = Modifier.size(180.dp)) {
+            Canvas(modifier = Modifier
+                .size(180.dp)
+                .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
+            ) {
                 val strokeWidth = 18.dp.toPx()
                 val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                 val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
@@ -269,12 +291,12 @@ private fun DailyProgressHero(total: Int, limit: Int) {
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text       = "$animatedCount",
-                    style      = MaterialTheme.typography.displayMedium,
+                    text       = if (isIdle) "🌿" else "$animatedCount",
+                    style      = if (isIdle) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Black
                 )
                 Text(
-                    text  = "of $limit today",
+                    text  = if (isIdle) "Ready to track" else "of $limit today",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

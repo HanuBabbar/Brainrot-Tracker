@@ -6,6 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -166,6 +171,9 @@ fun AppRoot(
             } else {
                 Scaffold(
                     bottomBar = {
+                        val friendsState by friendsViewModel.uiState.collectAsState()
+                        val pendingCount = friendsState.pendingRequests.size
+
                         NavigationBar {
                             NavigationBarItem(
                                 icon = { Icon(Icons.Default.Home, contentDescription = "Dashboard") },
@@ -180,7 +188,15 @@ fun AppRoot(
                                 onClick = { currentScreen = Screen.WeeklyUsage }
                             )
                             NavigationBarItem(
-                                icon = { Icon(Icons.Default.Person, contentDescription = "Friends") },
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (pendingCount > 0) Badge { Text("$pendingCount") }
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.Person, contentDescription = "Friends")
+                                    }
+                                },
                                 label = { Text("Friends", maxLines = 1) },
                                 selected = currentScreen is Screen.Friends,
                                 onClick = { friendsViewModel.loadFriends(); currentScreen = Screen.Friends }
@@ -201,54 +217,62 @@ fun AppRoot(
                     }
                 ) { paddingValues ->
                     Box(modifier = Modifier.padding(paddingValues)) {
-                        when (currentScreen) {
-                            is Screen.Dashboard -> {
-                                DashboardScreen(
-                                    viewModel = dashboardViewModel,
-                                    onMenuClick = { /* No-op */ },
-                                )
-                            }
-                            is Screen.WeeklyUsage -> {
-                                WeeklyUsageScreen(
-                                    viewModel = weeklyUsageViewModel,
-                                    onNavigateBack = { currentScreen = Screen.Dashboard }
-                                )
-                            }
-                            is Screen.Settings -> {
-                                SettingsScreen(
-                                    viewModel = settingsViewModel,
-                                    onNavigateBack = { currentScreen = Screen.Dashboard },
-                                    onNavigateToProfile = { currentScreen = Screen.Profile },
-                                    onNavigateToLogin = {
-                                        previousScreen = Screen.Settings
-                                        currentScreen = Screen.Login
-                                    }
-                                )
-                            }
-                            is Screen.Profile -> {
-                                ProfileScreen(
-                                    viewModel = settingsViewModel,
-                                    onNavigateBack = { currentScreen = Screen.Settings }
-                                )
-                            }
-                            is Screen.Login -> {
-                                LoginScreen(
-                                    viewModel = loginViewModel,
-                                    onNavigateBack = { currentScreen = previousScreen },
-                                    onLoginSuccess = { currentScreen = previousScreen }
-                                )
-                            }
-                            is Screen.Friends -> {
-                                FriendsScreen(
-                                    viewModel = friendsViewModel,
-                                    onNavigateBack = { currentScreen = Screen.Dashboard },
-                                )
-                            }
-                            is Screen.Leaderboard -> {
-                                LeaderboardScreen(
-                                    viewModel = leaderboardViewModel,
-                                    onNavigateBack = { currentScreen = Screen.Dashboard },
-                                )
+                        AnimatedContent(
+                            targetState = currentScreen,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                            },
+                            label = "screen_transition"
+                        ) { targetScreen ->
+                            when (targetScreen) {
+                                is Screen.Dashboard -> {
+                                    DashboardScreen(
+                                        viewModel = dashboardViewModel,
+                                        onMenuClick = { /* No-op */ },
+                                    )
+                                }
+                                is Screen.WeeklyUsage -> {
+                                    WeeklyUsageScreen(
+                                        viewModel = weeklyUsageViewModel,
+                                        onNavigateBack = { currentScreen = Screen.Dashboard }
+                                    )
+                                }
+                                is Screen.Settings -> {
+                                    SettingsScreen(
+                                        viewModel = settingsViewModel,
+                                        onNavigateBack = { currentScreen = Screen.Dashboard },
+                                        onNavigateToProfile = { currentScreen = Screen.Profile },
+                                        onNavigateToLogin = {
+                                            previousScreen = Screen.Settings
+                                            currentScreen = Screen.Login
+                                        }
+                                    )
+                                }
+                                is Screen.Profile -> {
+                                    ProfileScreen(
+                                        viewModel = settingsViewModel,
+                                        onNavigateBack = { currentScreen = Screen.Settings }
+                                    )
+                                }
+                                is Screen.Login -> {
+                                    LoginScreen(
+                                        viewModel = loginViewModel,
+                                        onNavigateBack = { currentScreen = previousScreen },
+                                        onLoginSuccess = { currentScreen = previousScreen }
+                                    )
+                                }
+                                is Screen.Friends -> {
+                                    FriendsScreen(
+                                        viewModel = friendsViewModel,
+                                        onNavigateBack = { currentScreen = Screen.Dashboard },
+                                    )
+                                }
+                                is Screen.Leaderboard -> {
+                                    LeaderboardScreen(
+                                        viewModel = leaderboardViewModel,
+                                        onNavigateBack = { currentScreen = Screen.Dashboard },
+                                    )
+                                }
                             }
                         }
                     }

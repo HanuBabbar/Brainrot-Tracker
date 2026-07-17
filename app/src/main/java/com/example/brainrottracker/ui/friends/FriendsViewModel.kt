@@ -8,9 +8,11 @@ import com.example.brainrottracker.data.model.UserSearchResult
 import com.example.brainrottracker.data.preferences.UserSettings
 import com.example.brainrottracker.data.remote.FriendsApiService
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class FriendsUiState(
@@ -28,6 +30,18 @@ class FriendsViewModel(private val userSettings: UserSettings) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FriendsUiState())
     val uiState: StateFlow<FriendsUiState> = _uiState.asStateFlow()
+
+    val friendCode: StateFlow<String?> = userSettings.friendCode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    val userName: StateFlow<String?> = userSettings.userName.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
 
     init {
         loadFriends()

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -81,7 +82,7 @@ fun FriendsScreen(
                 .padding(padding)
         ) {
             // Tab Row
-            TabRow(selectedTabIndex = pagerState.currentPage) {
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
                 Tab(
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
@@ -228,6 +229,7 @@ private fun FriendsListTab(
 @Composable
 private fun FriendCard(friend: FriendProfile, onRemove: () -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
+    var showMenu   by remember { mutableStateOf(false) }
 
     if (showDialog) {
         AlertDialog(
@@ -291,12 +293,25 @@ private fun FriendCard(friend: FriendProfile, onRemove: () -> Unit) {
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { showDialog = true }) {
+            // 3-dot overflow menu instead of an exposed red X button
+            Box {
+                IconButton(onClick = { showMenu = true }) {
                     Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Remove friend",
-                        tint = MaterialTheme.colorScheme.error
+                        Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Remove Friend", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            showDialog = true
+                        }
                     )
                 }
             }

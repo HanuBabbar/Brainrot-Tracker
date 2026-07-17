@@ -303,6 +303,11 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 CPUMode.entries.forEach { mode ->
+                    val description = when (mode) {
+                        CPUMode.LOW    -> "Saves battery — may miss occasional swipes"
+                        CPUMode.MEDIUM -> "Balanced — recommended for most users"
+                        CPUMode.HIGH   -> "Maximum accuracy — uses more battery"
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -317,11 +322,11 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = mode.name,
+                                text = mode.name.lowercase().replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                text = "${mode.intervalMs}ms interval",
+                                text = description,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
