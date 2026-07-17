@@ -103,7 +103,10 @@ private fun WeeklySummaryRow(data: List<UsageEntity>) {
         .takeLast(7)
 
     val weekTotal   = last7Days.sumOf { it.second }
-    val bestDay     = last7Days.maxByOrNull { it.second }
+    val peakDay     = last7Days.maxByOrNull { it.second }
+    val peakDayName = peakDay?.first?.let { dateLabel(it) } ?: "—"
+    val peakDayVal  = peakDay?.second ?: 0
+    val bestDay     = last7Days.filter { it.second > 0 }.minByOrNull { it.second }
     val bestDayName = bestDay?.first?.let { dateLabel(it) } ?: "—"
     val bestDayVal  = bestDay?.second ?: 0
 
@@ -111,31 +114,45 @@ private fun WeeklySummaryRow(data: List<UsageEntity>) {
     val ytTotal = data.filter { it.platform == "YouTube" }.sumOf { it.count }
     val topPlatform = if (igTotal >= ytTotal) "Instagram" else "YouTube"
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        SummaryChip(
-            label = "This week",
-            value = "$weekTotal",
-            subtitle = "swipes",
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.weight(1f)
-        )
-        SummaryChip(
-            label = "Best day",
-            value = bestDayName,
-            subtitle = "$bestDayVal swipes",
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.weight(1f)
-        )
-        SummaryChip(
-            label = "Most used",
-            value = if (topPlatform == "Instagram") "IG" else "YT",
-            subtitle = topPlatform,
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            modifier = Modifier.weight(1f)
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            SummaryChip(
+                label = "This week",
+                value = "$weekTotal",
+                subtitle = "swipes",
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            SummaryChip(
+                label = "Most used",
+                value = if (topPlatform == "Instagram") "IG" else "YT",
+                subtitle = topPlatform,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            SummaryChip(
+                label = "🏆 Best Day",
+                value = bestDayName,
+                subtitle = "$bestDayVal swipes",
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            SummaryChip(
+                label = "📈 Peak Day",
+                value = peakDayName,
+                subtitle = "$peakDayVal swipes",
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 

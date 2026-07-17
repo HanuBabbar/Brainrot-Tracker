@@ -54,4 +54,10 @@ class DashboardViewModel(
         }
         !breached
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val userName: StateFlow<String?> = userSettings.userName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val friendCode: StateFlow<String?> = userSettings.friendCode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 }

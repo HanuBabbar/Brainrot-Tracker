@@ -1,6 +1,7 @@
 package com.example.brainrottracker.ui.dashboard
 
 import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,21 +25,36 @@ import androidx.compose.ui.unit.sp
 import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.ui.AppViewModel
 import kotlinx.coroutines.launch
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.ContentCopy
+
+import androidx.compose.ui.res.painterResource
+import com.example.brainrottracker.R
 
 // ── Platform metadata ──────────────────────────────────────────────────────────
 
 private data class PlatformMeta(
     val key: String,
     val label: String,
-    val emoji: String,
+    val iconResId: Int,
     val color: Color
 )
 
-private val PLATFORMS = listOf(
-    PlatformMeta("Instagram", "Instagram Reels", "📸", InstagramColor),
-    PlatformMeta("YouTube",   "YouTube Shorts",  "▶",  YouTubeColor),
-    PlatformMeta("TikTok",   "TikTok",           "🎵", TikTokColor)
-)
+@Composable
+private fun platforms(): List<PlatformMeta> {
+    val accent = MaterialTheme.colorScheme.primary
+    return listOf(
+        PlatformMeta("Instagram", "Instagram Reels", R.drawable.ic_instagram, accent),
+        PlatformMeta("YouTube",   "YouTube Shorts",  R.drawable.ic_youtube,  accent),
+        PlatformMeta("TikTok",   "TikTok",           R.drawable.ic_tiktok,   accent)
+    )
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +68,9 @@ fun DashboardScreen(
     val yesterday     by viewModel.yesterdayStats.collectAsState()
     val dailyLimit    by viewModel.dailyLimit.collectAsState()
     val isPerfectWeek by viewModel.isPerfectWeek.collectAsState()
+    val userName      by viewModel.userName.collectAsState()
+    
+    val context = LocalContext.current
 
     val totalToday = stats.values.sumOf { it }
 
@@ -73,6 +92,8 @@ fun DashboardScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+
+
             // ── Hero ring ──────────────────────────────────────────────
             DailyProgressHero(total = totalToday, limit = dailyLimit)
 
@@ -104,7 +125,8 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                PLATFORMS.take(2).forEach { meta ->
+                val platformList = platforms()
+                platformList.take(2).forEach { meta ->
                     PlatformCard(
                         meta      = meta,
                         count     = stats[meta.key] ?: 0,
@@ -116,7 +138,7 @@ fun DashboardScreen(
             }
 
             // TikTok full-width
-            PLATFORMS.drop(2).forEach { meta ->
+            platforms().drop(2).forEach { meta ->
                 PlatformCard(
                     meta      = meta,
                     count     = stats[meta.key] ?: 0,
@@ -138,12 +160,20 @@ fun DashboardScreen(
 
 @Composable
 private fun DailyProgressHero(total: Int, limit: Int) {
-    val fraction = (total.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
+    val rawFraction = (total.toFloat() / limit.toFloat())
+    val baseFraction = rawFraction.coerceIn(0f, 1f)
+    val overFraction = (rawFraction - 1f).coerceIn(0f, 1f) // Up to 200% visually
+    val isIdle = total == 0
 
-    val animatedFraction by animateFloatAsState(
-        targetValue = fraction,
+    val animatedBaseFraction by animateFloatAsState(
+        targetValue = baseFraction,
         animationSpec = tween(durationMillis = 1200, easing = EaseOutCubic),
-        label = "ring"
+        label = "base_ring"
+    )
+    val animatedOverFraction by animateFloatAsState(
+        targetValue = overFraction,
+        animationSpec = tween(durationMillis = 1200, easing = EaseOutCubic),
+        label = "over_ring"
     )
     val animatedCount by animateIntAsState(
         targetValue = total,
@@ -151,16 +181,29 @@ private fun DailyProgressHero(total: Int, limit: Int) {
         label = "count"
     )
 
+    // Idle pulse animation — gently scales the ring up and down when no scrolls
+    val pulseAnim = rememberInfiniteTransition(label = "idle_pulse")
+    val pulseScale by pulseAnim.animateFloat(
+        initialValue = 1f,
+        targetValue  = if (isIdle) 1.05f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+
     val ringColor1 = MaterialTheme.colorScheme.primary
     val ringColor2 = MaterialTheme.colorScheme.tertiary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val errorColor = MaterialTheme.colorScheme.error
 
     val statusText = when {
-        fraction == 0f        -> "Start tracking 👀"
-        fraction < 0.4f       -> "Looking good 🌿"
-        fraction < 0.7f       -> "Getting there 🔥"
-        fraction < 1f         -> "Almost at limit ⚠️"
-        else                  -> "Limit reached 🚨"
+        rawFraction == 0f     -> "You're clean today! 🌿"
+        rawFraction < 0.4f    -> "Looking good 🌿"
+        rawFraction < 0.7f    -> "Getting there 🔥"
+        rawFraction < 1f      -> "Almost at limit ⚠️"
+        else                  -> "Limit smashed 🚨"
     }
 
     Column(
@@ -169,7 +212,10 @@ private fun DailyProgressHero(total: Int, limit: Int) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Canvas(modifier = Modifier.size(180.dp)) {
+            Canvas(modifier = Modifier
+                .size(180.dp)
+                .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
+            ) {
                 val strokeWidth = 18.dp.toPx()
                 val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                 val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
@@ -186,14 +232,27 @@ private fun DailyProgressHero(total: Int, limit: Int) {
                 )
 
                 // Progress arc
-                if (animatedFraction > 0f) {
+                if (animatedBaseFraction > 0f) {
                     drawArc(
                         brush      = Brush.sweepGradient(
                             listOf(ringColor1, ringColor2, ringColor1),
                             center = Offset(size.width / 2f, size.height / 2f)
                         ),
                         startAngle = 135f,
-                        sweepAngle = 270f * animatedFraction,
+                        sweepAngle = 270f * animatedBaseFraction,
+                        useCenter  = false,
+                        topLeft    = topLeft,
+                        size       = arcSize,
+                        style      = Stroke(strokeWidth, cap = StrokeCap.Round)
+                    )
+                }
+
+                // Over-limit arc
+                if (animatedOverFraction > 0f) {
+                    drawArc(
+                        color      = errorColor,
+                        startAngle = 135f,
+                        sweepAngle = 270f * animatedOverFraction,
                         useCenter  = false,
                         topLeft    = topLeft,
                         size       = arcSize,
@@ -204,12 +263,12 @@ private fun DailyProgressHero(total: Int, limit: Int) {
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text       = "$animatedCount",
-                    style      = MaterialTheme.typography.displayMedium,
+                    text       = if (isIdle) "🌿" else "$animatedCount",
+                    style      = if (isIdle) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Black
                 )
                 Text(
-                    text  = "of $limit today",
+                    text  = if (isIdle) "Ready to track" else "of $limit today",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -240,8 +299,12 @@ private fun PlatformCard(
     limit: Int,
     modifier: Modifier = Modifier
 ) {
-    val progress  = (count.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
-    val animProg  by animateFloatAsState(progress, tween(900), label = "bar_${meta.key}")
+    val rawFraction = if (limit > 0) (count.toFloat() / limit.toFloat()) else 0f
+    val baseFraction = rawFraction.coerceIn(0f, 1f)
+    val overFraction = (rawFraction - 1f).coerceIn(0f, 1f)
+
+    val animBaseProg  by animateFloatAsState(baseFraction, tween(900), label = "bar_${meta.key}")
+    val animOverProg  by animateFloatAsState(overFraction, tween(900), label = "over_${meta.key}")
     val animCount by animateIntAsState(count, tween(700), label = "count_${meta.key}")
 
     val delta = count - yesterday
@@ -271,7 +334,12 @@ private fun PlatformCard(
                 verticalAlignment      = Alignment.CenterVertically,
                 horizontalArrangement  = Arrangement.Center
             ) {
-                Text(meta.emoji, fontSize = 16.sp)
+                Icon(
+                    painter = painterResource(id = meta.iconResId),
+                    contentDescription = meta.label,
+                    modifier = Modifier.size(16.dp),
+                    tint = meta.color
+                )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text  = meta.label,
@@ -293,18 +361,27 @@ private fun PlatformCard(
 
             // Progress bar toward daily limit
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                LinearProgressIndicator(
-                    progress           = { animProg },
-                    modifier           = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp),
-                    color              = meta.color,
-                    trackColor         = MaterialTheme.colorScheme.surfaceVariant,
-                )
+                Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.fillMaxWidth().height(4.dp)) {
+                    LinearProgressIndicator(
+                        progress           = { animBaseProg },
+                        modifier           = Modifier.fillMaxSize(),
+                        color              = meta.color,
+                        trackColor         = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                    if (animOverProg > 0f) {
+                        LinearProgressIndicator(
+                            progress           = { animOverProg },
+                            modifier           = Modifier.fillMaxSize(),
+                            color              = MaterialTheme.colorScheme.error,
+                            trackColor         = Color.Transparent,
+                        )
+                    }
+                }
+                val percentString = if (rawFraction > 1f) "${(rawFraction * 100).toInt()}% (+${((rawFraction - 1f) * 100).toInt()}%)" else "${(animBaseProg * 100).toInt()}% of limit"
                 Text(
-                    text  = "${(animProg * 100).toInt()}% of limit",
+                    text  = percentString,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (rawFraction > 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )

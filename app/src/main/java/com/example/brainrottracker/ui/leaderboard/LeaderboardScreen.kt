@@ -38,6 +38,11 @@ fun LeaderboardScreen(
     val pagerState = rememberPagerState(pageCount = { LeaderboardTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
 
+    LaunchedEffect(pagerState.currentPage) {
+        val tab = LeaderboardTab.entries[pagerState.currentPage]
+        viewModel.onTabSelected(tab)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

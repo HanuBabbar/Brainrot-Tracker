@@ -14,6 +14,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.clickable
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -24,6 +31,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,9 +55,15 @@ fun FriendsScreen(
     onNavigateBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val friendCode by viewModel.friendCode.collectAsState()
+    val userName by viewModel.userName.collectAsState()
     val pagerState = rememberPagerState(pageCount = { 3 })
+    
+    BackHandler(onBack = onNavigateBack)
+
     val coroutineScope = rememberCoroutineScope()
     var searchCode by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     // Show snackbar for action messages
     val snackbarHostState = remember { SnackbarHostState() }
@@ -80,8 +95,15 @@ fun FriendsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Friend Code Badge
+            if (userName != null && friendCode != null) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    FriendCodeBadge(userName = userName!!, friendCode = friendCode!!, context = context)
+                }
+            }
+
             // Tab Row
-            TabRow(selectedTabIndex = pagerState.currentPage) {
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
                 Tab(
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
@@ -228,6 +250,7 @@ private fun FriendsListTab(
 @Composable
 private fun FriendCard(friend: FriendProfile, onRemove: () -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
+    var showMenu   by remember { mutableStateOf(false) }
 
     if (showDialog) {
         AlertDialog(
@@ -291,12 +314,25 @@ private fun FriendCard(friend: FriendProfile, onRemove: () -> Unit) {
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { showDialog = true }) {
+            // 3-dot overflow menu instead of an exposed red X button
+            Box {
+                IconButton(onClick = { showMenu = true }) {
                     Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Remove friend",
-                        tint = MaterialTheme.colorScheme.error
+                        Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Remove Friend", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            showDialog = true
+                        }
                     )
                 }
             }
@@ -511,6 +547,49 @@ private fun AddFriendTab(
                         Text("Add")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FriendCodeBadge(userName: String, friendCode: String, context: Context) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Friend Code", friendCode)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(context, "Friend code copied!", Toast.LENGTH_SHORT).show()
+            }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text("Hey $userName 👋", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    text = "Tap to share code: $friendCode", 
+                    style = MaterialTheme.typography.bodySmall, 
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                )
+            }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    Icons.Default.ContentCopy,
+                    contentDescription = "Copy code",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(8.dp)
+                )
             }
         }
     }

@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -23,15 +25,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.BackHandler
 import com.example.brainrottracker.data.preferences.CPUMode
 import com.example.brainrottracker.data.preferences.ThemeMode
+import com.example.brainrottracker.data.preferences.AuthMode
 import com.example.brainrottracker.service.BrainrotTrackerService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToProfile: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val dailyLimit by viewModel.dailyLimit.collectAsState()
     val cpuMode by viewModel.cpuMode.collectAsState()
@@ -42,6 +48,9 @@ fun SettingsScreen(
     
     val userName by viewModel.userName.collectAsState()
     val updateNameState by viewModel.updateNameState.collectAsState()
+    val authMode by viewModel.authMode.collectAsState()
+
+    BackHandler(onBack = onNavigateBack)
 
     val context = LocalContext.current
     var limitInput by remember(dailyLimit) { mutableStateOf(dailyLimit.toString()) }
@@ -76,48 +85,78 @@ fun SettingsScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(32.dp)
         ) {
-            // Profile Section
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Profile",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Profile / Login Section
+            if (authMode == AuthMode.LOGGED_IN) {
+                // Show Profile Card for logged-in users
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToProfile() },
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("Display Name") },
-                        singleLine = true
-                    )
-
-                    Button(
-                        onClick = { viewModel.updateUserName(nameInput) },
-                        enabled = nameInput.isNotBlank() && nameInput != userName && updateNameState !is SettingsViewModel.UiState.Loading,
-                        modifier = Modifier.height(56.dp) // Match height of OutlinedTextField
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        if (updateNameState is SettingsViewModel.UiState.Loading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text("Your Profile", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Name, Friend Code, Log Out",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Go to Profile",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                // Show Log In card for offline users
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Using Locally", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(
+                            "Log in to sync your stats, compete with friends, and access the leaderboard.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(
+                            onClick = onNavigateToLogin,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             )
-                        } else {
-                            Text("Save")
+                        ) {
+                            Text("Log In & Sync Data")
                         }
                     }
                 }
-                Text(
-                    text = "This name will be shown on the leaderboard.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
             }
             
             HorizontalDivider()
@@ -267,6 +306,11 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 CPUMode.entries.forEach { mode ->
+                    val description = when (mode) {
+                        CPUMode.LOW    -> "Saves battery — may miss occasional swipes"
+                        CPUMode.MEDIUM -> "Balanced — recommended for most users"
+                        CPUMode.HIGH   -> "Maximum accuracy — uses more battery"
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -281,11 +325,11 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = mode.name,
+                                text = mode.name.lowercase().replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                text = "${mode.intervalMs}ms interval",
+                                text = description,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )

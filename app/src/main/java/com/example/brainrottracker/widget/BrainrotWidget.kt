@@ -34,12 +34,16 @@ import android.content.Intent
 import com.example.brainrottracker.MainActivity
 
 private val WidgetBackground = ColorProvider(
-    day = Color(0xFFF3F4F6),
-    night = Color(0xFF1E1E1E)
+    day = Color(0xFFFBFDF9),
+    night = Color(0xFF191C1A)
 )
 private val WidgetTextColor = ColorProvider(
-    day = Color(0xFF111827),
-    night = Color(0xFFE5E7EB)
+    day = Color(0xFF191C1A),
+    night = Color(0xFFE1E3DF)
+)
+private val WidgetPrimaryColor = ColorProvider(
+    day = Color(0xFF006C4C),
+    night = Color(0xFF6CDBAC)
 )
 
 class BrainrotWidget : GlanceAppWidget() {
@@ -82,7 +86,7 @@ class BrainrotWidget : GlanceAppWidget() {
             Text(
                 text = count.toString(),
                 style = TextStyle(
-                    color = GlanceTheme.colors.primary,
+                    color = WidgetPrimaryColor,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )

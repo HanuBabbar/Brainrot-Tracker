@@ -16,6 +16,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import com.example.brainrottracker.data.remote.FriendsApiService
 import kotlinx.coroutines.flow.first
 import android.content.BroadcastReceiver
 import android.content.Intent
@@ -169,6 +172,30 @@ class BrainrotTrackerService : AccessibilityService() {
                     } else {
                         notificationManager.cancel(NotificationHelper.PERSISTENT_NOTIFICATION_ID)
                     }
+                }
+            }
+            
+            // Friend Request Polling
+            launch {
+                while (true) {
+                    try {
+                        val userId = userSettings.userId.first()
+                        if (userId != null) {
+                            val response = FriendsApiService.getFriends(userId).getOrNull()
+                            if (response != null) {
+                                val notifiedSet = userSettings.notifiedFriendRequests.first()
+                                response.pendingRequests.forEach { pendingUser ->
+                                    if (!notifiedSet.contains(pendingUser.userId)) {
+                                        notificationHelper.sendFriendRequestNotification(pendingUser.name)
+                                        userSettings.addNotifiedFriendRequest(pendingUser.userId)
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("BrainrotTracker", "Error polling friends: ${e.message}")
+                    }
+                    delay(10 * 60 * 1000) // Poll every 10 minutes (600,000 ms)
                 }
             }
         }
