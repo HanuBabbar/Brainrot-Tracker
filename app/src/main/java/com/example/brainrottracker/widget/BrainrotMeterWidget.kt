@@ -42,16 +42,16 @@ import com.example.brainrottracker.data.repository.UsageRepository
 import com.example.brainrottracker.util.NotificationHelper
 
 private val WidgetBackground = ColorProvider(
-    day = Color(0xFFF3F4F6),
-    night = Color(0xFF1E1E1E)
+    day = Color(0xFFFBFDF9),
+    night = Color(0xFF191C1A)
 )
 private val WidgetTextColor = ColorProvider(
-    day = Color(0xFF111827),
-    night = Color(0xFFE5E7EB)
+    day = Color(0xFF191C1A),
+    night = Color(0xFFE1E3DF)
 )
 private val WidgetPrimaryColor = ColorProvider(
-    day = Color(0xFF6200EE),
-    night = Color(0xFFBB86FC)
+    day = Color(0xFF006C4C),
+    night = Color(0xFF6CDBAC)
 )
 
 class BrainrotMeterWidget : GlanceAppWidget() {
@@ -105,8 +105,8 @@ class BrainrotMeterWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.fillMaxWidth(),
                 color = WidgetPrimaryColor,
                 backgroundColor = ColorProvider(
-                    day = Color.Gray.copy(alpha = 0.3f),
-                    night = Color.Gray.copy(alpha = 0.3f)
+                    day = Color(0xFFDBE5DD),
+                    night = Color(0xFF404943)
                 )
             )
             Spacer(modifier = GlanceModifier.height(12.dp))
@@ -114,11 +114,8 @@ class BrainrotMeterWidget : GlanceAppWidget() {
                 text = if (strictMode) "Strict Mode: ON" else "Strict Mode: OFF",
                 onClick = actionRunCallback<ToggleStrictModeAction>(),
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = ColorProvider(
-                        day = if (strictMode) Color(0xFFEF4444) else Color(0xFF6B7280),
-                        night = if (strictMode) Color(0xFFEF4444) else Color(0xFF6B7280)
-                    ),
-                    contentColor = ColorProvider(day = Color.White, night = Color.White)
+                    backgroundColor = if (strictMode) WidgetPrimaryColor else ColorProvider(day = Color(0xFFDBE5DD), night = Color(0xFF404943)),
+                    contentColor = if (strictMode) ColorProvider(Color.White, Color.Black) else WidgetTextColor
                 ),
                 modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
             )
