@@ -69,7 +69,6 @@ fun DashboardScreen(
     val dailyLimit    by viewModel.dailyLimit.collectAsState()
     val isPerfectWeek by viewModel.isPerfectWeek.collectAsState()
     val userName      by viewModel.userName.collectAsState()
-    val friendCode    by viewModel.friendCode.collectAsState()
     
     val context = LocalContext.current
 
@@ -93,10 +92,7 @@ fun DashboardScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // ── Welcome / Friend Code Badge ────────────────────────────
-            if (userName != null && friendCode != null) {
-                FriendCodeBadge(userName = userName!!, friendCode = friendCode!!, context = context)
-            }
+
 
             // ── Hero ring ──────────────────────────────────────────────
             DailyProgressHero(total = totalToday, limit = dailyLimit)
@@ -160,62 +156,24 @@ fun DashboardScreen(
     }
 }
 
-// ── Welcome / Friend Code Badge ───────────────────────────────────────────────
-
-@Composable
-private fun FriendCodeBadge(userName: String, friendCode: String, context: Context) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Friend Code", friendCode)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(context, "Friend code copied!", Toast.LENGTH_SHORT).show()
-            }
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text("Hey $userName 👋", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                Text(
-                    text = "Tap to share code: $friendCode", 
-                    style = MaterialTheme.typography.bodySmall, 
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                )
-            }
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.ContentCopy,
-                    contentDescription = "Copy code",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
-        }
-    }
-}
-
 // ── Hero: animated circular progress ring ─────────────────────────────────────
 
 @Composable
 private fun DailyProgressHero(total: Int, limit: Int) {
-    val fraction = (total.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
+    val rawFraction = (total.toFloat() / limit.toFloat())
+    val baseFraction = rawFraction.coerceIn(0f, 1f)
+    val overFraction = (rawFraction - 1f).coerceIn(0f, 1f) // Up to 200% visually
     val isIdle = total == 0
 
-    val animatedFraction by animateFloatAsState(
-        targetValue = fraction,
+    val animatedBaseFraction by animateFloatAsState(
+        targetValue = baseFraction,
         animationSpec = tween(durationMillis = 1200, easing = EaseOutCubic),
-        label = "ring"
+        label = "base_ring"
+    )
+    val animatedOverFraction by animateFloatAsState(
+        targetValue = overFraction,
+        animationSpec = tween(durationMillis = 1200, easing = EaseOutCubic),
+        label = "over_ring"
     )
     val animatedCount by animateIntAsState(
         targetValue = total,
@@ -238,13 +196,14 @@ private fun DailyProgressHero(total: Int, limit: Int) {
     val ringColor1 = MaterialTheme.colorScheme.primary
     val ringColor2 = MaterialTheme.colorScheme.tertiary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val errorColor = MaterialTheme.colorScheme.error
 
     val statusText = when {
-        fraction == 0f        -> "You're clean today! 🌿"
-        fraction < 0.4f       -> "Looking good 🌿"
-        fraction < 0.7f       -> "Getting there 🔥"
-        fraction < 1f         -> "Almost at limit ⚠️"
-        else                  -> "Limit reached 🚨"
+        rawFraction == 0f     -> "You're clean today! 🌿"
+        rawFraction < 0.4f    -> "Looking good 🌿"
+        rawFraction < 0.7f    -> "Getting there 🔥"
+        rawFraction < 1f      -> "Almost at limit ⚠️"
+        else                  -> "Limit smashed 🚨"
     }
 
     Column(
@@ -273,14 +232,27 @@ private fun DailyProgressHero(total: Int, limit: Int) {
                 )
 
                 // Progress arc
-                if (animatedFraction > 0f) {
+                if (animatedBaseFraction > 0f) {
                     drawArc(
                         brush      = Brush.sweepGradient(
                             listOf(ringColor1, ringColor2, ringColor1),
                             center = Offset(size.width / 2f, size.height / 2f)
                         ),
                         startAngle = 135f,
-                        sweepAngle = 270f * animatedFraction,
+                        sweepAngle = 270f * animatedBaseFraction,
+                        useCenter  = false,
+                        topLeft    = topLeft,
+                        size       = arcSize,
+                        style      = Stroke(strokeWidth, cap = StrokeCap.Round)
+                    )
+                }
+
+                // Over-limit arc
+                if (animatedOverFraction > 0f) {
+                    drawArc(
+                        color      = errorColor,
+                        startAngle = 135f,
+                        sweepAngle = 270f * animatedOverFraction,
                         useCenter  = false,
                         topLeft    = topLeft,
                         size       = arcSize,
@@ -327,8 +299,12 @@ private fun PlatformCard(
     limit: Int,
     modifier: Modifier = Modifier
 ) {
-    val progress  = (count.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
-    val animProg  by animateFloatAsState(progress, tween(900), label = "bar_${meta.key}")
+    val rawFraction = if (limit > 0) (count.toFloat() / limit.toFloat()) else 0f
+    val baseFraction = rawFraction.coerceIn(0f, 1f)
+    val overFraction = (rawFraction - 1f).coerceIn(0f, 1f)
+
+    val animBaseProg  by animateFloatAsState(baseFraction, tween(900), label = "bar_${meta.key}")
+    val animOverProg  by animateFloatAsState(overFraction, tween(900), label = "over_${meta.key}")
     val animCount by animateIntAsState(count, tween(700), label = "count_${meta.key}")
 
     val delta = count - yesterday
@@ -385,18 +361,27 @@ private fun PlatformCard(
 
             // Progress bar toward daily limit
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                LinearProgressIndicator(
-                    progress           = { animProg },
-                    modifier           = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp),
-                    color              = meta.color,
-                    trackColor         = MaterialTheme.colorScheme.surfaceVariant,
-                )
+                Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.fillMaxWidth().height(4.dp)) {
+                    LinearProgressIndicator(
+                        progress           = { animBaseProg },
+                        modifier           = Modifier.fillMaxSize(),
+                        color              = meta.color,
+                        trackColor         = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                    if (animOverProg > 0f) {
+                        LinearProgressIndicator(
+                            progress           = { animOverProg },
+                            modifier           = Modifier.fillMaxSize(),
+                            color              = MaterialTheme.colorScheme.error,
+                            trackColor         = Color.Transparent,
+                        )
+                    }
+                }
+                val percentString = if (rawFraction > 1f) "${(rawFraction * 100).toInt()}% (+${((rawFraction - 1f) * 100).toInt()}%)" else "${(animBaseProg * 100).toInt()}% of limit"
                 Text(
-                    text  = "${(animProg * 100).toInt()}% of limit",
+                    text  = percentString,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (rawFraction > 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
