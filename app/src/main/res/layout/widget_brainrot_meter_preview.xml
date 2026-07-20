@@ -19,9 +19,9 @@
             android:textColor="#191C1A"
             android:textStyle="bold"
             android:textSize="12sp" />
-        <Space
+        <TextView
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_weight="1" />
         <TextView
             android:layout_width="wrap_content"
@@ -32,13 +32,11 @@
     </LinearLayout>
 
     <ProgressBar
-        style="?android:attr/progressBarStyleHorizontal"
+        style="@android:style/Widget.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="12dp"
-        android:progressTint="#006C4C"
-        android:progressBackgroundTint="#DBE5DD"
         android:max="100"
         android:progress="42" />
 
@@ -46,7 +44,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Strict Mode: ON"
-        android:backgroundTint="#006C4C"
         android:textColor="#FFFFFF"
         android:textSize="12sp"
         android:minHeight="40dp" />
