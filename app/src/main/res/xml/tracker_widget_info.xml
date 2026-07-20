@@ -5,4 +5,5 @@
     android:targetCellWidth="1"
     android:targetCellHeight="1"
     android:resizeMode="horizontal|vertical"
+    android:previewLayout="@layout/widget_brainrot_preview"
     android:widgetCategory="home_screen" />
