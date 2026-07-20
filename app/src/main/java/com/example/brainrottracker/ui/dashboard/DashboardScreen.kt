@@ -1,6 +1,9 @@
 package com.example.brainrottracker.ui.dashboard
 
 import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -10,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -29,6 +34,8 @@ import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -71,6 +78,11 @@ fun DashboardScreen(
     val userName      by viewModel.userName.collectAsState()
     
     val context = LocalContext.current
+    var isVisible by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
 
     val totalToday = stats.values.sumOf { it }
 
@@ -95,7 +107,12 @@ fun DashboardScreen(
 
 
             // ── Hero ring ──────────────────────────────────────────────
-            DailyProgressHero(total = totalToday, limit = dailyLimit)
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(tween(500))
+            ) {
+                DailyProgressHero(total = totalToday, limit = dailyLimit)
+            }
 
             if (isPerfectWeek) {
                 Surface(
@@ -114,42 +131,67 @@ fun DashboardScreen(
             }
 
             // ── Platform cards ─────────────────────────────────────────
-            Text(
-                text = "Today's Breakdown",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            // Instagram + YouTube side by side
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(tween(500, delayMillis = 100))
             ) {
-                val platformList = platforms()
-                platformList.take(2).forEach { meta ->
-                    PlatformCard(
-                        meta      = meta,
-                        count     = stats[meta.key] ?: 0,
-                        yesterday = yesterday[meta.key] ?: 0,
-                        limit     = dailyLimit,
-                        modifier  = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // TikTok full-width
-            platforms().drop(2).forEach { meta ->
-                PlatformCard(
-                    meta      = meta,
-                    count     = stats[meta.key] ?: 0,
-                    yesterday = yesterday[meta.key] ?: 0,
-                    limit     = dailyLimit,
-                    modifier  = Modifier.fillMaxWidth()
+                Text(
+                    text = "Today's Breakdown",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
+            val platformList = platforms()
+            val sortedPlatforms = platformList.sortedByDescending { stats[it.key] ?: 0 }
+
+            if (sortedPlatforms.isNotEmpty()) {
+                val heroPlatform = sortedPlatforms.first()
+                val remainingPlatforms = sortedPlatforms.drop(1)
+
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 200)) + fadeIn(tween(500, delayMillis = 200))
+                ) {
+                    PlatformCard(
+                        meta      = heroPlatform,
+                        count     = stats[heroPlatform.key] ?: 0,
+                        yesterday = yesterday[heroPlatform.key] ?: 0,
+                        limit     = dailyLimit,
+                        modifier  = Modifier.fillMaxWidth()
+                    )
+                }
+
+                if (remainingPlatforms.isNotEmpty()) {
+                    AnimatedVisibility(
+                        visible = isVisible,
+                        enter = slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 300)) + fadeIn(tween(500, delayMillis = 300))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            remainingPlatforms.forEach { meta ->
+                                PlatformCard(
+                                    meta      = meta,
+                                    count     = stats[meta.key] ?: 0,
+                                    yesterday = yesterday[meta.key] ?: 0,
+                                    limit     = dailyLimit,
+                                    modifier  = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── Contextual message ─────────────────────────────────────
-            ContextualMessage(total = totalToday, limit = dailyLimit)
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = slideInVertically(initialOffsetY = { 50 }, animationSpec = tween(500, delayMillis = 400)) + fadeIn(tween(500, delayMillis = 400))
+            ) {
+                ContextualMessage(total = totalToday, limit = dailyLimit)
+            }
 
             Spacer(Modifier.height(8.dp))
         }
@@ -319,8 +361,23 @@ private fun PlatformCard(
         else       -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (isPressed) 0.95f else 1f, tween(150), label = "scale")
+    val haptic = LocalHapticFeedback.current
+
     Card(
-        modifier  = modifier,
+        modifier  = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            },
         shape     = MaterialTheme.shapes.extraLarge,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

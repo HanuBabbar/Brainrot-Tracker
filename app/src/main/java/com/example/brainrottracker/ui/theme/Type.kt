@@ -16,7 +16,7 @@ val provider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
-val fontName = GoogleFont("Nunito")
+val fontName = GoogleFont("Outfit")
 
 val appFontFamily = FontFamily(
     Font(googleFont = fontName, fontProvider = provider)
