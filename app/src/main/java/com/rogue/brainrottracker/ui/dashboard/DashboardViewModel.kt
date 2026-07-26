@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.dashboard
+package com.rogue.brainrottracker.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -48,7 +48,9 @@ class DashboardViewModel(
 
     /** Perfect week streak badge logic (true if no day in the last 7 days breached the limit) */
     val isPerfectWeek: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(repository.getWeekly(), userSettings.dailyLimit) { list, limit ->
-        // list contains usage entities for the last 7 days
+        // Must have at least one day of recorded usage — new users with no data
+        // should NOT see the streak badge.
+        if (list.isEmpty()) return@combine false
         val breached = list.groupBy { it.date }.any { (_, entries) ->
             entries.sumOf { it.count } >= limit
         }

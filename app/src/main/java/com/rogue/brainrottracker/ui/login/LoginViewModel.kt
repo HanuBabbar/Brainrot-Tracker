@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.login
+package com.rogue.brainrottracker.ui.login
 
 import android.content.Context
 import android.util.Log
@@ -13,6 +13,7 @@ import com.rogue.brainrottracker.data.preferences.UserSettings
 import com.rogue.brainrottracker.data.remote.NetworkClient
 import com.rogue.brainrottracker.data.repository.UsageRepository
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -37,8 +38,8 @@ class LoginViewModel(
             
             val credentialManager = CredentialManager.create(context)
             
-            // This is your Web Client ID from Google Cloud Console
-            val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
+            // Try the prettier One Tap bottom sheet first
+            val googleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
                 .setServerClientId("364383832109-mdhbmh2o7ehu6akht2s46vp74vb1trtc.apps.googleusercontent.com")
                 .setAutoSelectEnabled(true)
@@ -52,8 +53,24 @@ class LoginViewModel(
                 val result = credentialManager.getCredential(context, request)
                 handleSignIn(result)
             } catch (e: GetCredentialException) {
-                Log.e("LoginViewModel", "Login failed", e)
-                _uiState.value = LoginUiState.Error(e.message ?: "Login failed")
+                Log.w("LoginViewModel", "One Tap failed: ${e::class.simpleName}, trying fallback...")
+                
+                // Fallback: use GetSignInWithGoogleOption (full-screen but more reliable)
+                try {
+                    val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(
+                        "364383832109-mdhbmh2o7ehu6akht2s46vp74vb1trtc.apps.googleusercontent.com"
+                    ).build()
+
+                    val fallbackRequest = GetCredentialRequest.Builder()
+                        .addCredentialOption(signInWithGoogleOption)
+                        .build()
+
+                    val result = credentialManager.getCredential(context, fallbackRequest)
+                    handleSignIn(result)
+                } catch (e2: GetCredentialException) {
+                    Log.e("LoginViewModel", "All sign-in methods failed: ${e2.message}", e2)
+                    _uiState.value = LoginUiState.Error(e2.message ?: "Login failed")
+                }
             }
         }
     }
