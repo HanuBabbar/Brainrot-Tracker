@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker
+package com.rogue.brainrottracker
 
 import android.os.Bundle
 import android.util.Log
@@ -78,6 +78,13 @@ class MainActivity : ComponentActivity() {
         val friendsViewModel = FriendsViewModel(userSettings)
         val leaderboardViewModel = LeaderboardViewModel(userSettings)
 
+        // Read deep link friend code if app was launched via brainrottracker://add-friend?code=BRT-XXXX
+        val deepLinkCode: String? = intent
+            ?.takeIf { it.action == android.content.Intent.ACTION_VIEW }
+            ?.data
+            ?.getQueryParameter("code")
+            ?.uppercase()
+
         setContent {
             val themeMode by userSettings.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
             val isDark = when(themeMode) {
@@ -94,6 +101,7 @@ class MainActivity : ComponentActivity() {
                     loginViewModel = loginViewModel,
                     friendsViewModel = friendsViewModel,
                     leaderboardViewModel = leaderboardViewModel,
+                    initialFriendCode = deepLinkCode,
                 )
             }
         }
@@ -109,10 +117,17 @@ fun AppRoot(
     loginViewModel: LoginViewModel,
     friendsViewModel: FriendsViewModel,
     leaderboardViewModel: LeaderboardViewModel,
+    initialFriendCode: String? = null,
 ) {
     val context = LocalContext.current
     val authMode by appViewModel.authMode.collectAsState()
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
+    // If launched from a deep link, open Friends tab pre-filled; otherwise start at Dashboard
+    var currentScreen by remember {
+        mutableStateOf<Screen>(
+            if (initialFriendCode != null) Screen.Friends(initialFriendCode)
+            else Screen.Dashboard
+        )
+    }
     var previousScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
 
     // Request Notification Permission for Android 13+
@@ -199,7 +214,7 @@ fun AppRoot(
                                 },
                                 label = { Text("Friends", maxLines = 1) },
                                 selected = currentScreen is Screen.Friends,
-                                onClick = { friendsViewModel.loadFriends(); currentScreen = Screen.Friends }
+                                onClick = { friendsViewModel.loadFriends(); currentScreen = Screen.Friends() }
                             )
                             NavigationBarItem(
                                 icon = { Icon(Icons.Default.Star, contentDescription = "Leaderboard") },
@@ -264,6 +279,7 @@ fun AppRoot(
                                 is Screen.Friends -> {
                                     FriendsScreen(
                                         viewModel = friendsViewModel,
+                                        initialCode = targetScreen.initialCode,
                                         onNavigateBack = { currentScreen = Screen.Dashboard },
                                     )
                                 }

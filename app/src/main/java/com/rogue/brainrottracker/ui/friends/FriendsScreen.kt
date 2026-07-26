@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.friends
+package com.rogue.brainrottracker.ui.friends
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.BackHandler
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,6 +55,7 @@ import com.rogue.brainrottracker.data.model.FriendRequest
 fun FriendsScreen(
     viewModel: FriendsViewModel,
     onNavigateBack: () -> Unit,
+    initialCode: String = "BRT-",
 ) {
     val state by viewModel.uiState.collectAsState()
     val friendCode by viewModel.friendCode.collectAsState()
@@ -62,8 +65,15 @@ fun FriendsScreen(
     BackHandler(onBack = onNavigateBack)
 
     val coroutineScope = rememberCoroutineScope()
-    var searchCode by remember { mutableStateOf("") }
+    var searchCode by remember { mutableStateOf(initialCode) }
     val context = LocalContext.current
+
+    // If a pre-filled code arrived via deep link, jump straight to the Add Friend tab
+    LaunchedEffect(Unit) {
+        if (initialCode != "BRT-") {
+            pagerState.animateScrollToPage(2)
+        }
+    }
 
     // Show snackbar for action messages
     val snackbarHostState = remember { SnackbarHostState() }
@@ -164,7 +174,8 @@ fun FriendsScreen(
                     2 -> AddFriendTab(
                         searchCode = searchCode,
                         onSearchCodeChange = {
-                            searchCode = it.uppercase()
+                            val newText = it.uppercase()
+                            searchCode = if (newText.startsWith("BRT-")) newText.take(8) else "BRT-"
                             viewModel.clearSearchResult()
                         },
                         onSearch = { viewModel.searchByCode(searchCode) },
@@ -175,7 +186,7 @@ fun FriendsScreen(
                         searchError = state.searchError,
                         onSendRequest = { userId ->
                             viewModel.sendRequest(userId)
-                            searchCode = ""
+                            searchCode = "BRT-"
                         },
                     )
                 }
@@ -477,7 +488,7 @@ private fun AddFriendTab(
             fontWeight = FontWeight.Bold,
         )
         Text(
-            "Enter a friend's code (e.g. BRT-X7K2) to send them a request.",
+            "Enter your friend's 4-character code suffix to send a request.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.outline,
         )
@@ -486,7 +497,6 @@ private fun AddFriendTab(
             value = searchCode,
             onValueChange = onSearchCodeChange,
             label = { Text("Friend Code") },
-            placeholder = { Text("BRT-XXXX") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
@@ -498,7 +508,7 @@ private fun AddFriendTab(
         Button(
             onClick = onSearch,
             modifier = Modifier.fillMaxWidth(),
-            enabled = searchCode.length >= 4 && !isSearching,
+            enabled = searchCode.length == 8 && !isSearching,
             shape = RoundedCornerShape(12.dp),
         ) {
             if (isSearching) {
@@ -557,39 +567,63 @@ private fun FriendCodeBadge(userName: String, friendCode: String, context: Conte
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Friend Code", friendCode)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(context, "Friend code copied!", Toast.LENGTH_SHORT).show()
-            }
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text("Hey $userName 👋", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Tap to share code: $friendCode", 
-                    style = MaterialTheme.typography.bodySmall, 
+                    "Hey $userName 👋",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = "Your code: $friendCode",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                 )
             }
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.ContentCopy,
-                    contentDescription = "Copy code",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(8.dp)
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Share button — opens native Android share sheet
+                IconButton(
+                    onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                "Add me on BrainrotTracker! My friend code is $friendCode\nTap to add me instantly: https://brainrot-server-ykrt.onrender.com/invite?code=$friendCode"
+                            )
+                        }
+                        context.startActivity(
+                            Intent.createChooser(shareIntent, "Share your friend code")
+                        )
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = "Share code",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                // Copy button
+                IconButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("Friend Code", friendCode)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Friend code copied!", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = "Copy code",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
             }
         }
     }

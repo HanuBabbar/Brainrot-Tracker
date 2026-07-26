@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui
+package com.rogue.brainrottracker.ui
 
 sealed class Screen {
     object Dashboard : Screen()
@@ -6,6 +6,6 @@ sealed class Screen {
     object Settings : Screen()
     object Profile : Screen()
     object Login : Screen()
-    object Friends : Screen()
+    data class Friends(val initialCode: String = "BRT-") : Screen()
     object Leaderboard : Screen()
 }
