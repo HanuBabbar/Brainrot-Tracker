@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.leaderboard
+package com.rogue.brainrottracker.ui.leaderboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -78,7 +78,7 @@ class LeaderboardViewModel(private val userSettings: UserSettings) : ViewModel()
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoadingGlobal = false,
-                        errorGlobal = "Could not load global leaderboard: ${e.message}",
+                        errorGlobal = "Could not load global leaderboard. Please check your internet connection.",
                     )
                 }
             )
@@ -108,7 +108,7 @@ class LeaderboardViewModel(private val userSettings: UserSettings) : ViewModel()
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoadingFriends = false,
-                        errorFriends = "Could not load friends leaderboard: ${e.message}",
+                        errorFriends = "Could not load friends leaderboard. Please check your internet connection.",
                     )
                 }
             )

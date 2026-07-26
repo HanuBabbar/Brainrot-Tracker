@@ -37,8 +37,8 @@ android {
         applicationId = "com.rogue.brainrottracker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.933"
+        versionCode = 9
+        versionName = "0.934"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

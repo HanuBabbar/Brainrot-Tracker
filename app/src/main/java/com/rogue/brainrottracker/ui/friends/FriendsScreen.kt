@@ -595,7 +595,7 @@ private fun FriendCodeBadge(userName: String, friendCode: String, context: Conte
                             type = "text/plain"
                             putExtra(
                                 Intent.EXTRA_TEXT,
-                                "Add me on BrainrotTracker! My friend code is $friendCode\nTap to add me instantly: https://brainrot-server-ykrt.onrender.com/invite?code=$friendCode"
+                                "Add me on BrainrotTracker! My friend code is $friendCode\nTap to add me instantly: https://playful-crepe-93fd77.netlify.app/?code=$friendCode"
                             )
                         }
                         context.startActivity(
