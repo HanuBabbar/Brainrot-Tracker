@@ -1,7 +1,8 @@
-﻿package com.rogue.brainrottracker.ui.components
+package com.rogue.brainrottracker.ui.components
 
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -11,9 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.rogue.brainrottracker.R
 
 @Composable
 fun PermissionScreen() {
@@ -32,11 +35,10 @@ fun PermissionScreen() {
                 color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.size(80.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = null,
-                    modifier = Modifier.padding(20.dp).fillMaxSize(),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                Image(
+                    painter = painterResource(id = R.mipmap.ic_launcher_foreground),
+                    contentDescription = "App Logo",
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 

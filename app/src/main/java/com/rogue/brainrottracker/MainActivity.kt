@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -321,18 +323,11 @@ fun AuthChoiceScreen(onContinueOffline: () -> Unit, onLogIn: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Hero Icon
-                Surface(
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                Image(
+                    painter = painterResource(id = R.mipmap.ic_launcher_foreground),
+                    contentDescription = "App Logo",
                     modifier = Modifier.size(100.dp)
-                ) {
-                    Icon(
-                        androidx.compose.material.icons.Icons.Default.Star, // Placeholder for a brain/cool icon
-                        contentDescription = "App Logo",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(24.dp).fillMaxSize()
-                    )
-                }
+                )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
