@@ -31,8 +31,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -89,106 +89,105 @@ fun FriendsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Friends", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { viewModel.loadFriends() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 )
             )
         }
     ) { padding ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = { viewModel.loadFriends() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Friend Code Badge
-            if (userName != null && friendCode != null) {
-                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    FriendCodeBadge(userName = userName!!, friendCode = friendCode!!, context = context)
-                }
-            }
-
-            // Tab Row
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
-                Tab(
-                    selected = pagerState.currentPage == 0,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = {
-                        Text(
-                            "My Friends",
-                            fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal
-                        )
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Friend Code Badge
+                if (userName != null && friendCode != null) {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        FriendCodeBadge(userName = userName!!, friendCode = friendCode!!, context = context)
                     }
-                )
-                Tab(
-                    selected = pagerState.currentPage == 1,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                }
+
+                // Tab Row
+                PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+                    Tab(
+                        selected = pagerState.currentPage == 0,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                        text = {
                             Text(
-                                "Requests",
-                                fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal
+                                "My Friends",
+                                fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal
                             )
-                            if (state.pendingRequests.isNotEmpty()) {
-                                Badge { Text("${state.pendingRequests.size}") }
+                        }
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 1,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Requests",
+                                    fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal
+                                )
+                                if (state.pendingRequests.isNotEmpty()) {
+                                    Badge { Text("${state.pendingRequests.size}") }
+                                }
                             }
                         }
-                    }
-                )
-                Tab(
-                    selected = pagerState.currentPage == 2,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                    text = {
-                        Text(
-                            "Add Friend",
-                            fontWeight = if (pagerState.currentPage == 2) FontWeight.Bold else FontWeight.Normal
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 2,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+                        text = {
+                            Text(
+                                "Add Friend",
+                                fontWeight = if (pagerState.currentPage == 2) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    )
+                }
+
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    when (page) {
+                        0 -> FriendsListTab(
+                            friends = state.friends,
+                            isLoading = state.isLoading,
+                            onRemove = { viewModel.removeFriend(it) },
+                            onRefresh = { viewModel.loadFriends() },
+                        )
+                        1 -> RequestsTab(
+                            pendingRequests = state.pendingRequests,
+                            sentRequests = state.sentRequests,
+                            onAccept = { viewModel.acceptRequest(it) },
+                            onDecline = { viewModel.declineRequest(it) },
+                        )
+                        2 -> AddFriendTab(
+                            searchCode = searchCode,
+                            onSearchCodeChange = {
+                                val newText = it.uppercase()
+                                searchCode = if (newText.startsWith("BRT-")) newText.take(8) else "BRT-"
+                                viewModel.clearSearchResult()
+                            },
+                            onSearch = { viewModel.searchByCode(searchCode) },
+                            isSearching = state.isSearching,
+                            searchResult = state.searchResult?.let {
+                                Triple(it.userId, it.name, it.friendCode)
+                            },
+                            searchError = state.searchError,
+                            onSendRequest = { userId ->
+                                viewModel.sendRequest(userId)
+                                searchCode = "BRT-"
+                            },
                         )
                     }
-                )
-            }
-
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
-                when (page) {
-                    0 -> FriendsListTab(
-                        friends = state.friends,
-                        isLoading = state.isLoading,
-                        onRemove = { viewModel.removeFriend(it) },
-                        onRefresh = { viewModel.loadFriends() },
-                    )
-                    1 -> RequestsTab(
-                        pendingRequests = state.pendingRequests,
-                        sentRequests = state.sentRequests,
-                        onAccept = { viewModel.acceptRequest(it) },
-                        onDecline = { viewModel.declineRequest(it) },
-                    )
-                    2 -> AddFriendTab(
-                        searchCode = searchCode,
-                        onSearchCodeChange = {
-                            val newText = it.uppercase()
-                            searchCode = if (newText.startsWith("BRT-")) newText.take(8) else "BRT-"
-                            viewModel.clearSearchResult()
-                        },
-                        onSearch = { viewModel.searchByCode(searchCode) },
-                        isSearching = state.isSearching,
-                        searchResult = state.searchResult?.let {
-                            Triple(it.userId, it.name, it.friendCode)
-                        },
-                        searchError = state.searchError,
-                        onSendRequest = { userId ->
-                            viewModel.sendRequest(userId)
-                            searchCode = "BRT-"
-                        },
-                    )
                 }
             }
         }
@@ -202,7 +201,7 @@ private fun FriendsListTab(
     onRemove: (String) -> Unit,
     onRefresh: () -> Unit,
 ) {
-    if (isLoading) {
+    if (isLoading && friends.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
