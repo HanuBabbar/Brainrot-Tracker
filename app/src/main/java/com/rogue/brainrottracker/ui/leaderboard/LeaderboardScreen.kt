@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.leaderboard
+package com.rogue.brainrottracker.ui.leaderboard
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -11,7 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -47,90 +47,90 @@ fun LeaderboardScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Leaderboard", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 )
             )
         }
     ) { padding ->
-        Column(
+        val isRefreshing = state.isLoadingGlobal || state.isLoadingFriends
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refresh() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Tab toggle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                LeaderboardTab.entries.forEach { tab ->
-                    val isSelected = pagerState.currentPage == tab.ordinal
-                    val bgColor by animateColorAsState(
-                        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                        animationSpec = tween(200),
-                        label = "tab_color"
-                    )
-                    val textColor by animateColorAsState(
-                        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        animationSpec = tween(200),
-                        label = "text_color"
-                    )
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(50))
-                            .background(bgColor),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TextButton(
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(tab.ordinal) } },
-                            modifier = Modifier.fillMaxWidth(),
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Tab toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    LeaderboardTab.entries.forEach { tab ->
+                        val isSelected = pagerState.currentPage == tab.ordinal
+                        val bgColor by animateColorAsState(
+                            targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            animationSpec = tween(200),
+                            label = "tab_color"
+                        )
+                        val textColor by animateColorAsState(
+                            targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            animationSpec = tween(200),
+                            label = "text_color"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(50))
+                                .background(bgColor),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = if (tab == LeaderboardTab.GLOBAL) "🌍 Global" else "👥 Friends",
-                                color = textColor,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            )
+                            TextButton(
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(tab.ordinal) } },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = if (tab == LeaderboardTab.GLOBAL) "🌍 Global" else "👥 Friends",
+                                    color = textColor,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Date label
-            if (state.date.isNotEmpty()) {
-                Text(
-                    "Today — ${state.date}",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-            }
+                // Date label
+                if (state.date.isNotEmpty()) {
+                    Text(
+                        "Today — ${state.date}",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                }
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
-                val isLoading = if (page == 0) state.isLoadingGlobal else state.isLoadingFriends
-                val error = if (page == 0) state.errorGlobal else state.errorFriends
-                val myRank = if (page == 0) state.globalMyRank else state.friendsMyRank
-                val entries = if (page == 0) state.globalEntries else state.friendsEntries
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    val isLoading = if (page == 0) state.isLoadingGlobal else state.isLoadingFriends
+                    val error = if (page == 0) state.errorGlobal else state.errorFriends
+                    val myRank = if (page == 0) state.globalMyRank else state.friendsMyRank
+                    val entries = if (page == 0) state.globalEntries else state.friendsEntries
 
-                LeaderboardPageContent(
-                    isLoading = isLoading,
-                    error = error,
-                    entries = entries,
-                    myRank = myRank
-                )
+                    LeaderboardPageContent(
+                        isLoading = isLoading,
+                        error = error,
+                        entries = entries,
+                        myRank = myRank
+                    )
+                }
             }
         }
     }
@@ -165,7 +165,7 @@ private fun LeaderboardPageContent(
         }
 
         when {
-            isLoading -> {
+            isLoading && entries.isEmpty() -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
