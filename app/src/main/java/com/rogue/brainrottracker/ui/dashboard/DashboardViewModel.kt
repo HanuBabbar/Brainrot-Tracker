@@ -46,14 +46,14 @@ class DashboardViewModel(
     val dailyLimit: StateFlow<Int> = userSettings.dailyLimit
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100)
 
-    /** Perfect week streak badge logic (true if no day in the last 7 days breached the limit) */
     val isPerfectWeek: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(repository.getWeekly(), userSettings.dailyLimit) { list, limit ->
-        // Must have at least one day of recorded usage — new users with no data
-        // should NOT see the streak badge.
-        if (list.isEmpty()) return@combine false
-        val breached = list.groupBy { it.date }.any { (_, entries) ->
-            entries.sumOf { it.count } >= limit
-        }
+        // Group rows by date and sum per-day totals
+        val dailyTotals = list.groupBy { it.date }
+            .mapValues { (_, entries) -> entries.sumOf { it.count } }
+
+        // Require data for all 7 days AND every day must be under the limit
+        if (dailyTotals.size < 7) return@combine false
+        val breached = dailyTotals.any { (_, total) -> total >= limit }
         !breached
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
