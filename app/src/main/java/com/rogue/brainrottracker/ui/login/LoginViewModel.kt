@@ -128,6 +128,8 @@ class LoginViewModel(
                     // Immediately sync all local data under the correct server userId
                     // so the leaderboard shows accurate counts right away
                     try {
+                        usageRepository.pullData()
+                        Log.d("LoginViewModel", "✅ Post-login pull complete")
                         usageRepository.syncData()
                         Log.d("LoginViewModel", "✅ Post-login sync complete")
                     } catch (e: Exception) {

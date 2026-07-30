@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.data.repository
+package com.rogue.brainrottracker.data.repository
 
 import com.rogue.brainrottracker.data.local.UsageDao
 import com.rogue.brainrottracker.data.local.UsageEntity
@@ -8,6 +8,7 @@ import com.rogue.brainrottracker.data.remote.SyncRequest
 import com.rogue.brainrottracker.util.NotificationHelper
 import androidx.glance.appwidget.updateAll
 import com.rogue.brainrottracker.widget.BrainrotWidget
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
@@ -101,6 +102,34 @@ class UsageRepository(
             android.util.Log.d("UsageRepository", "Sync successful: ${response.status}")
         } catch (e: Exception) {
             android.util.Log.e("UsageRepository", "Sync failed", e)
+        }
+    }
+
+    suspend fun pullData() {
+        val userId = userSettings.userId.first() ?: return
+
+        try {
+            val url = "${NetworkClient.BASE_URL}sync/pull?userId=$userId"
+            val response = NetworkClient.client.get(url)
+            val pullResponse = response.body<com.rogue.brainrottracker.data.remote.PullResponse>()
+
+            // Merge: for each cloud entry, only overwrite local if cloud count is higher
+            for (stat in pullResponse.stats) {
+                val local = usageDao.getUsageByDate(stat.date, stat.platform)
+                if (local == null || stat.count > local.count) {
+                    usageDao.upsertUsage(
+                        UsageEntity(
+                            id = local?.id ?: 0,
+                            date = stat.date,
+                            platform = stat.platform,
+                            count = stat.count
+                        )
+                    )
+                }
+            }
+            updateWidgets()
+        } catch (e: Exception) {
+            android.util.Log.e("UsageRepository", "Pull failed", e)
         }
     }
 
