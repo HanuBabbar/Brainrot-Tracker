@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -41,6 +42,7 @@ import com.rogue.brainrottracker.data.preferences.UserSettings
 import com.rogue.brainrottracker.data.repository.UsageRepository
 import com.rogue.brainrottracker.service.BrainrotTrackerService
 import com.rogue.brainrottracker.ui.AppViewModel
+import com.rogue.brainrottracker.ui.AppViewModelFactory
 import com.rogue.brainrottracker.ui.Screen
 import com.rogue.brainrottracker.ui.components.PermissionScreen
 import com.rogue.brainrottracker.ui.dashboard.DashboardScreen
@@ -63,22 +65,24 @@ import androidx.compose.foundation.isSystemInDarkTheme
 
 
 class MainActivity : ComponentActivity() {
+
+    private val userSettings by lazy { UserSettings(this) }
+    private val repository by lazy {
+        val database = AppDatabase.getDatabase(this)
+        UsageRepository(database.usageDao(), userSettings, NotificationHelper(this), database.sessionDao())
+    }
+    private val viewModelFactory by lazy { AppViewModelFactory(userSettings, repository) }
+
+    private val appViewModel: AppViewModel by viewModels { viewModelFactory }
+    private val dashboardViewModel: DashboardViewModel by viewModels { viewModelFactory }
+    private val weeklyUsageViewModel: WeeklyUsageViewModel by viewModels { viewModelFactory }
+    private val settingsViewModel: SettingsViewModel by viewModels { viewModelFactory }
+    private val loginViewModel: LoginViewModel by viewModels { viewModelFactory }
+    private val friendsViewModel: FriendsViewModel by viewModels { viewModelFactory }
+    private val leaderboardViewModel: LeaderboardViewModel by viewModels { viewModelFactory }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val userSettings = UserSettings(this)
-        val appViewModel = AppViewModel(userSettings)
-
-        // 1. Initialize data layer manually for now
-        val database = AppDatabase.getDatabase(this)
-        val notificationHelper = NotificationHelper(this)
-        val repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
-        val dashboardViewModel = DashboardViewModel(repository, userSettings)
-        val weeklyUsageViewModel = WeeklyUsageViewModel(repository)
-        val settingsViewModel = SettingsViewModel(userSettings)
-        val loginViewModel = LoginViewModel(userSettings, repository)
-        val friendsViewModel = FriendsViewModel(userSettings)
-        val leaderboardViewModel = LeaderboardViewModel(userSettings)
 
         // Read deep link friend code if app was launched via brainrottracker://add-friend?code=BRT-XXXX
         val deepLinkCode: String? = intent

@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.settings
+package com.rogue.brainrottracker.ui.settings
 
 import android.content.Intent
 import androidx.compose.foundation.border
@@ -45,7 +45,11 @@ fun SettingsScreen(
     val persistentNotificationEnabled by viewModel.persistentNotificationEnabled.collectAsState()
     val strictModeEnabled by viewModel.strictModeEnabled.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
-    
+    val cooldownDurationMinutes by viewModel.cooldownDurationMinutes.collectAsState()
+    val breatheScreenEnabled by viewModel.breatheScreenEnabled.collectAsState()
+    val breatheIntervalReels by viewModel.breatheIntervalReels.collectAsState()
+    val grayscaleRampEnabled by viewModel.grayscaleRampEnabled.collectAsState()
+
     val userName by viewModel.userName.collectAsState()
     val updateNameState by viewModel.updateNameState.collectAsState()
     val authMode by viewModel.authMode.collectAsState()
@@ -55,6 +59,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     var limitInput by remember(dailyLimit) { mutableStateOf(dailyLimit.toString()) }
     var nameInput by remember(userName) { mutableStateOf(userName ?: "") }
+    var cooldownInput by remember(cooldownDurationMinutes) { mutableStateOf(cooldownDurationMinutes.toString()) }
+    var breatheIntervalInput by remember(breatheIntervalReels) { mutableStateOf(breatheIntervalReels.toString()) }
 
     LaunchedEffect(updateNameState) {
         when (val state = updateNameState) {
@@ -158,7 +164,7 @@ fun SettingsScreen(
                     }
                 }
             }
-            
+
             HorizontalDivider()
 
             // Daily Limit Section
@@ -210,6 +216,94 @@ fun SettingsScreen(
                     Switch(
                         checked = strictModeEnabled,
                         onCheckedChange = { viewModel.setStrictModeEnabled(it) }
+                    )
+                }
+
+                if (strictModeEnabled) {
+                    OutlinedTextField(
+                        value = cooldownInput,
+                        onValueChange = { input ->
+                            val filtered = input.filter { it.isDigit() }
+                            cooldownInput = filtered
+
+                            val parsed = filtered.toIntOrNull()
+                            if (parsed != null && parsed in 1..180) {
+                                viewModel.setCooldownDurationMinutes(parsed)
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Cooldown Duration (minutes)") },
+                        supportingText = { Text("How long the tracker blocks re-entry after you hit the limit.") },
+                        singleLine = true
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // Focus Tools Section
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Focus Tools",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Breathe Screen", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Show a short breathing pause every few reels.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Switch(
+                        checked = breatheScreenEnabled,
+                        onCheckedChange = { viewModel.setBreatheScreenEnabled(it) }
+                    )
+                }
+
+                if (breatheScreenEnabled) {
+                    OutlinedTextField(
+                        value = breatheIntervalInput,
+                        onValueChange = { input ->
+                            val filtered = input.filter { it.isDigit() }
+                            breatheIntervalInput = filtered
+
+                            val parsed = filtered.toIntOrNull()
+                            if (parsed != null && parsed in 1..200) {
+                                viewModel.setBreatheIntervalReels(parsed)
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Every N reels (1-200)") },
+                        singleLine = true
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Increasing Grayscale", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "The screen desaturates more as you approach today's limit.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Switch(
+                        checked = grayscaleRampEnabled,
+                        onCheckedChange = { viewModel.setGrayscaleRampEnabled(it) }
                     )
                 }
             }
@@ -395,7 +489,7 @@ fun SettingsScreen(
                     }
                 }
             }
-            
+
             Spacer(Modifier.height(32.dp))
         }
     }

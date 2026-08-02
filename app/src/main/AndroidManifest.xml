@@ -14,7 +14,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
         android:theme="@style/Theme.BrainrotTracker">
         <activity
             android:name=".MainActivity"
@@ -33,6 +33,13 @@
                 <data android:scheme="brainrottracker" android:host="add-friend" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ui.intervention.BreatheActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.BrainrotTracker" />
+
         <service
             android:name=".service.BrainrotTrackerService"
             android:exported="false"

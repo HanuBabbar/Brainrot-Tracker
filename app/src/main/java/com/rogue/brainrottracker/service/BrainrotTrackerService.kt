@@ -14,12 +14,13 @@ import com.rogue.brainrottracker.service.engines.TrackedPlatform
 import com.rogue.brainrottracker.util.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import com.rogue.brainrottracker.data.remote.FriendsApiService
-import kotlinx.coroutines.flow.first
+import com.rogue.brainrottracker.ui.intervention.BreatheActivity
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
@@ -31,6 +32,17 @@ class BrainrotTrackerService : AccessibilityService() {
     private lateinit var repository: UsageRepository
     private lateinit var userSettings: UserSettings
     private lateinit var notificationHelper: NotificationHelper
+    private val screenFilter by lazy { ScreenFilterOverlay(this) }
+    private var overlayHideJob: Job? = null
+    private var reelsSinceBreathe = 0
+
+    private fun scheduleOverlayAutoHide() {
+        overlayHideJob?.cancel()
+        overlayHideJob = serviceScope.launch {
+            delay(5_000)
+            screenFilter.hide()
+        }
+    }
 
     private val actionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -100,7 +112,23 @@ class BrainrotTrackerService : AccessibilityService() {
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 Log.d("BrainrotTracker", "Focus: ${platform.displayName}")
-                platform.engine.onWindowFocused()
+                serviceScope.launch {
+                    val cooldownUntil = userSettings.cooldownUntil.first()
+                    val nowMs = System.currentTimeMillis()
+                    if (nowMs < cooldownUntil) {
+                        val remainingMin = ((cooldownUntil - nowMs) / 60_000L).toInt() + 1
+                        launch(Dispatchers.Main) {
+                            android.widget.Toast.makeText(
+                                this@BrainrotTrackerService,
+                                "Cooldown active — ${remainingMin}m left",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                        return@launch
+                    }
+                    platform.engine.onWindowFocused()
+                }
             }
 
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
@@ -124,17 +152,55 @@ class BrainrotTrackerService : AccessibilityService() {
 
     private fun saveSwipe(platformDisplayName: String) {
         serviceScope.launch {
-            val shouldBlock = repository.incrementUsage(platformDisplayName)
-            if (shouldBlock) {
+            val result = repository.incrementUsage(platformDisplayName)
+
+            // Session tracking — a fresh session means the last one just closed, checkpoint-sync it
+            val startedNewSession = repository.trackSwipeForSession(platformDisplayName)
+            if (startedNewSession) {
+                repository.syncData()
+            }
+
+            // Escalating grayscale — ramps with today's fraction of the daily limit
+            if (userSettings.grayscaleRampEnabled.first()) {
+                val fraction = if (result.dailyLimit > 0) result.totalCountToday.toFloat() / result.dailyLimit else 0f
+                screenFilter.updateIntensity(fraction)
+                screenFilter.show()
+                scheduleOverlayAutoHide()
+            }
+
+            // Breathe screen every N reels
+            if (userSettings.breatheScreenEnabled.first()) {
+                reelsSinceBreathe++
+                val interval = userSettings.breatheIntervalReels.first().coerceAtLeast(1)
+                if (reelsSinceBreathe >= interval) {
+                    reelsSinceBreathe = 0
+                    startActivity(
+                        Intent(this@BrainrotTrackerService, BreatheActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                    )
+                }
+            }
+
+            // Strict-mode limit hit — kick home and start a cooldown lockout
+            if (result.shouldBlock) {
+                val cooldownMinutes = userSettings.cooldownDurationMinutes.first()
+                userSettings.setCooldownUntil(System.currentTimeMillis() + cooldownMinutes * 60_000L)
                 launch(Dispatchers.Main) {
-                    android.widget.Toast.makeText(this@BrainrotTrackerService, "Strict Mode: Daily Limit Exceeded!", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(
+                        this@BrainrotTrackerService,
+                        "Strict Mode: Daily Limit Exceeded! Cooldown for ${cooldownMinutes}m.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
                 }
                 performGlobalAction(GLOBAL_ACTION_HOME)
             }
         }
     }
 
-    override fun onInterrupt() {}
+    override fun onInterrupt() {
+        screenFilter.hide()
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -151,7 +217,7 @@ class BrainrotTrackerService : AccessibilityService() {
         val database = AppDatabase.getDatabase(this)
         userSettings = UserSettings(this)
         notificationHelper = NotificationHelper(this)
-        repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
+        repository = UsageRepository(database.usageDao(), userSettings, notificationHelper, database.sessionDao())
 
         // Build the engine map from the registry — adding a platform only touches PlatformRegistry
         platforms = PlatformRegistry.build(resources)
@@ -205,6 +271,8 @@ class BrainrotTrackerService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        overlayHideJob?.cancel()
+        screenFilter.hide()
         unregisterReceiver(actionReceiver)
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         notificationManager.cancel(NotificationHelper.PERSISTENT_NOTIFICATION_ID)

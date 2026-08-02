@@ -61,7 +61,7 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun sendFriendRequestNotification(friendName: String) {
-        val intent = android.content.Intent(context, Class.forName("com.rogue.brainrottracker.MainActivity")).apply {
+        val intent = android.content.Intent(context, com.rogue.brainrottracker.MainActivity::class.java).apply {
             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val pendingIntent = android.app.PendingIntent.getActivity(

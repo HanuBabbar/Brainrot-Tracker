@@ -30,6 +30,11 @@ class UserSettings(private val context: Context) {
         private val PERSISTENT_NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("persistent_notification_enabled")
         private val STRICT_MODE_ENABLED_KEY = booleanPreferencesKey("strict_mode_enabled")
         private val NOTIFIED_FRIEND_REQUESTS_KEY = stringSetPreferencesKey("notified_friend_requests")
+        private val COOLDOWN_DURATION_MINUTES_KEY = intPreferencesKey("cooldown_duration_minutes")
+        private val COOLDOWN_UNTIL_KEY = androidx.datastore.preferences.core.longPreferencesKey("cooldown_until")
+        private val BREATHE_SCREEN_ENABLED_KEY = booleanPreferencesKey("breathe_screen_enabled")
+        private val BREATHE_INTERVAL_REELS_KEY = intPreferencesKey("breathe_interval_reels")
+        private val GRAYSCALE_RAMP_ENABLED_KEY = booleanPreferencesKey("grayscale_ramp_enabled")
     }
 
     suspend fun setAuthMode(mode: AuthMode) {
@@ -123,6 +128,26 @@ class UserSettings(private val context: Context) {
         }
     }
 
+    suspend fun setCooldownDurationMinutes(minutes: Int) {
+        context.dataStore.edit { prefs -> prefs[COOLDOWN_DURATION_MINUTES_KEY] = minutes }
+    }
+
+    suspend fun setCooldownUntil(epochMillis: Long) {
+        context.dataStore.edit { prefs -> prefs[COOLDOWN_UNTIL_KEY] = epochMillis }
+    }
+
+    suspend fun setBreatheScreenEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[BREATHE_SCREEN_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun setBreatheIntervalReels(count: Int) {
+        context.dataStore.edit { prefs -> prefs[BREATHE_INTERVAL_REELS_KEY] = count }
+    }
+
+    suspend fun setGrayscaleRampEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[GRAYSCALE_RAMP_ENABLED_KEY] = enabled }
+    }
+
     val authMode: Flow<AuthMode> = context.dataStore.data.map { prefs ->
         val stored = prefs[AUTH_MODE_KEY]
         try {
@@ -184,5 +209,25 @@ class UserSettings(private val context: Context) {
 
     val notifiedFriendRequests: Flow<Set<String>> = context.dataStore.data.map { prefs ->
         prefs[NOTIFIED_FRIEND_REQUESTS_KEY] ?: emptySet()
+    }
+
+    val cooldownDurationMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[COOLDOWN_DURATION_MINUTES_KEY] ?: 15
+    }
+
+    val cooldownUntil: Flow<Long> = context.dataStore.data.map { prefs ->
+        prefs[COOLDOWN_UNTIL_KEY] ?: 0L
+    }
+
+    val breatheScreenEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[BREATHE_SCREEN_ENABLED_KEY] ?: true
+    }
+
+    val breatheIntervalReels: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[BREATHE_INTERVAL_REELS_KEY] ?: 20
+    }
+
+    val grayscaleRampEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[GRAYSCALE_RAMP_ENABLED_KEY] ?: false
     }
 }
