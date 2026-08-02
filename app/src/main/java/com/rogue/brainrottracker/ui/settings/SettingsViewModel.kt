@@ -59,6 +59,18 @@ class SettingsViewModel(
     val themeMode: StateFlow<ThemeMode> = userSettings.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
+    val cooldownDurationMinutes: StateFlow<Int> = userSettings.cooldownDurationMinutes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 15)
+
+    val breatheScreenEnabled: StateFlow<Boolean> = userSettings.breatheScreenEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val breatheIntervalReels: StateFlow<Int> = userSettings.breatheIntervalReels
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 20)
+
+    val grayscaleRampEnabled: StateFlow<Boolean> = userSettings.grayscaleRampEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun setDailyLimit(limit: Int) {
         viewModelScope.launch {
             userSettings.setDailyLimit(limit)
@@ -92,6 +104,30 @@ class SettingsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             userSettings.setThemeMode(mode)
+        }
+    }
+
+    fun setCooldownDurationMinutes(minutes: Int) {
+        viewModelScope.launch {
+            userSettings.setCooldownDurationMinutes(minutes)
+        }
+    }
+
+    fun setBreatheScreenEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSettings.setBreatheScreenEnabled(enabled)
+        }
+    }
+
+    fun setBreatheIntervalReels(count: Int) {
+        viewModelScope.launch {
+            userSettings.setBreatheIntervalReels(count)
+        }
+    }
+
+    fun setGrayscaleRampEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSettings.setGrayscaleRampEnabled(enabled)
         }
     }
 
