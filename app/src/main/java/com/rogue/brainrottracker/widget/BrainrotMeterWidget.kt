@@ -60,7 +60,7 @@ class BrainrotMeterWidget : GlanceAppWidget() {
         val database = AppDatabase.getDatabase(context)
         val userSettings = UserSettings(context)
         val notificationHelper = NotificationHelper(context)
-        val repository = UsageRepository(database.usageDao(), userSettings, notificationHelper)
+        val repository = UsageRepository(database.usageDao(), userSettings, notificationHelper, database.sessionDao())
         
         provideContent {
             val count by repository.getTodayTotal().collectAsState(initial = 0)
