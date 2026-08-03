@@ -8,19 +8,26 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 object NetworkClient {
     const val BASE_URL = "https://brainrot-server-ykrt.onrender.com/api/v1/"
 
-    // lateinit — initialised once from MainActivity before any coroutine uses the client
-    private lateinit var userSettings: UserSettings
+    @Volatile
+    var currentJwtToken: String? = null
+        private set
 
     /** Call once at app startup (e.g. in MainActivity.onCreate) before any network request. */
-    fun init(settings: UserSettings) {
-        userSettings = settings
+    fun init(settings: UserSettings, scope: CoroutineScope = CoroutineScope(Dispatchers.IO)) {
+        scope.launch {
+            settings.jwtToken.collectLatest { token ->
+                currentJwtToken = token
+            }
+        }
     }
 
     val client: HttpClient by lazy {
@@ -38,10 +45,8 @@ object NetworkClient {
             }
             // Automatically attach the JWT Bearer token to every outgoing request
             install(DefaultRequest) {
-                val token = runBlocking {
-                    if (::userSettings.isInitialized) userSettings.jwtToken.firstOrNull() else null
-                }
-                if (token != null) {
+                val token = currentJwtToken
+                if (!token.isNullOrEmpty()) {
                     headers.append("Authorization", "Bearer $token")
                 }
             }

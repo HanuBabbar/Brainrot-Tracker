@@ -42,8 +42,8 @@ data class LeaderboardEntry(
 
 @Serializable
 data class LeaderboardResponse(
-    val date: String,
-    val leaderboard: List<LeaderboardEntry>,
-    val myRank: Int?,
+    val date: String = "",
+    val leaderboard: List<LeaderboardEntry> = emptyList(),
+    val myRank: Int? = null,
     val myEntry: LeaderboardEntry? = null,
 )
