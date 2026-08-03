@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SyncRequest(
-    val userId: String,
+    // userId is no longer sent in the body — the server reads it from the JWT Bearer token
     val stats: List<UsageEntity>
 )
 

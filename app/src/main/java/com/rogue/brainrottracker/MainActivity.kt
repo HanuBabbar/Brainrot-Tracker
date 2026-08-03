@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.rogue.brainrottracker.data.local.AppDatabase
 import com.rogue.brainrottracker.data.preferences.AuthMode
 import com.rogue.brainrottracker.data.preferences.UserSettings
+import com.rogue.brainrottracker.data.remote.NetworkClient
 import com.rogue.brainrottracker.data.repository.UsageRepository
 import com.rogue.brainrottracker.service.BrainrotTrackerService
 import com.rogue.brainrottracker.ui.AppViewModel
@@ -83,6 +84,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialise NetworkClient with UserSettings so the JWT Bearer token
+        // is automatically attached to every outgoing HTTP request.
+        NetworkClient.init(userSettings)
 
         // Read deep link friend code if app was launched via brainrottracker://add-friend?code=BRT-XXXX
         val deepLinkCode: String? = intent

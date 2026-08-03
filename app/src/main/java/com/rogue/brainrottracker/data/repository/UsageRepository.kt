@@ -141,7 +141,8 @@ class UsageRepository(
     fun getTodayTotal(): Flow<Int?> = usageDao.getTotalCountForDate(getTodayDate())
 
     suspend fun syncData() {
-        val userId = userSettings.userId.first() ?: return
+        // Only sync when logged in
+        if (userSettings.userId.first() == null) return
         val stats = usageDao.getWeeklyUsage(getSevenDaysAgoCutoff()).first()
 
         try {
@@ -149,7 +150,7 @@ class UsageRepository(
             val url = "${NetworkClient.BASE_URL}sync"
             val response = NetworkClient.client.post(url) {
                 contentType(ContentType.Application.Json)
-                setBody(SyncRequest(userId, stats))
+                setBody(SyncRequest(stats))
             }
             android.util.Log.d("UsageRepository", "Sync successful: ${response.status}")
         } catch (e: Exception) {
@@ -158,10 +159,12 @@ class UsageRepository(
     }
 
     suspend fun pullData() {
-        val userId = userSettings.userId.first() ?: return
+        // Only pull when logged in
+        if (userSettings.userId.first() == null) return
 
         try {
-            val url = "${NetworkClient.BASE_URL}sync/pull?userId=$userId"
+            // No userId query param — the server reads it from the JWT Bearer token
+            val url = "${NetworkClient.BASE_URL}sync/pull"
             val response = NetworkClient.client.get(url)
             val pullResponse = response.body<com.rogue.brainrottracker.data.remote.PullResponse>()
 

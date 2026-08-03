@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.data.remote
+package com.rogue.brainrottracker.data.remote
 
 import com.rogue.brainrottracker.data.model.FriendsResponse
 import com.rogue.brainrottracker.data.model.UserSearchResult
@@ -7,14 +7,16 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
 
+// fromUserId removed — the server reads the caller identity from the JWT Bearer token
 @Serializable
-data class FriendActionRequest(val fromUserId: String, val toUserId: String)
+data class FriendActionRequest(val toUserId: String)
+
+// userId fields removed — server reads caller identity from the JWT Bearer token
+@Serializable
+data class AcceptDeclineRequest(val friendUserId: String)
 
 @Serializable
-data class AcceptDeclineRequest(val userId: String, val friendUserId: String)
-
-@Serializable
-data class RemoveFriendRequest(val userId: String, val friendUserId: String)
+data class RemoveFriendRequest(val friendUserId: String)
 
 object FriendsApiService {
     private val client get() = NetworkClient.client
@@ -26,34 +28,34 @@ object FriendsApiService {
         }.body()
     }
 
-    suspend fun sendRequest(fromUserId: String, toUserId: String): Result<Unit> = runCatching {
+    suspend fun sendRequest(toUserId: String): Result<Unit> = runCatching {
         client.post("$base/request") {
             contentType(ContentType.Application.Json)
-            setBody(FriendActionRequest(fromUserId, toUserId))
+            setBody(FriendActionRequest(toUserId))
         }
         Unit
     }
 
-    suspend fun acceptRequest(userId: String, friendUserId: String): Result<Unit> = runCatching {
+    suspend fun acceptRequest(friendUserId: String): Result<Unit> = runCatching {
         client.post("$base/accept") {
             contentType(ContentType.Application.Json)
-            setBody(AcceptDeclineRequest(userId, friendUserId))
+            setBody(AcceptDeclineRequest(friendUserId))
         }
         Unit
     }
 
-    suspend fun declineRequest(userId: String, friendUserId: String): Result<Unit> = runCatching {
+    suspend fun declineRequest(friendUserId: String): Result<Unit> = runCatching {
         client.post("$base/decline") {
             contentType(ContentType.Application.Json)
-            setBody(AcceptDeclineRequest(userId, friendUserId))
+            setBody(AcceptDeclineRequest(friendUserId))
         }
         Unit
     }
 
-    suspend fun removeFriend(userId: String, friendUserId: String): Result<Unit> = runCatching {
+    suspend fun removeFriend(friendUserId: String): Result<Unit> = runCatching {
         client.delete("$base/remove") {
             contentType(ContentType.Application.Json)
-            setBody(RemoveFriendRequest(userId, friendUserId))
+            setBody(RemoveFriendRequest(friendUserId))
         }
         Unit
     }

@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.friends
+package com.rogue.brainrottracker.ui.friends
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -86,8 +86,7 @@ class FriendsViewModel(private val userSettings: UserSettings) : ViewModel() {
 
     fun sendRequest(toUserId: String) {
         viewModelScope.launch {
-            val fromUserId = userSettings.userId.first() ?: return@launch
-            FriendsApiService.sendRequest(fromUserId, toUserId).fold(
+            FriendsApiService.sendRequest(toUserId).fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(
                         searchResult = null,
@@ -104,22 +103,19 @@ class FriendsViewModel(private val userSettings: UserSettings) : ViewModel() {
 
     fun acceptRequest(friendUserId: String) {
         viewModelScope.launch {
-            val userId = userSettings.userId.first() ?: return@launch
-            FriendsApiService.acceptRequest(userId, friendUserId).onSuccess { loadFriends() }
+            FriendsApiService.acceptRequest(friendUserId).onSuccess { loadFriends() }
         }
     }
 
     fun declineRequest(friendUserId: String) {
         viewModelScope.launch {
-            val userId = userSettings.userId.first() ?: return@launch
-            FriendsApiService.declineRequest(userId, friendUserId).onSuccess { loadFriends() }
+            FriendsApiService.declineRequest(friendUserId).onSuccess { loadFriends() }
         }
     }
 
     fun removeFriend(friendUserId: String) {
         viewModelScope.launch {
-            val userId = userSettings.userId.first() ?: return@launch
-            FriendsApiService.removeFriend(userId, friendUserId).onSuccess { loadFriends() }
+            FriendsApiService.removeFriend(friendUserId).onSuccess { loadFriends() }
         }
     }
 
