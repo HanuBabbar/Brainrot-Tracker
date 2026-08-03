@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.data.model
+package com.rogue.brainrottracker.data.model
 
 import kotlinx.serialization.Serializable
 
@@ -34,7 +34,7 @@ data class UserSearchResult(
 @Serializable
 data class LeaderboardEntry(
     val rank: Int,
-    val userId: String,
+    val userId: String? = null,
     val name: String,
     val totalCount: Int,
     val isMe: Boolean = false,
