@@ -1,4 +1,4 @@
-package com.rogue.brainrottracker.ui.settings
+﻿package com.rogue.brainrottracker.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -138,8 +138,14 @@ class SettingsViewModel(
         }
 
         viewModelScope.launch {
+            val currentUserId = userSettings.userId.firstOrNull()
+            if (currentUserId == null) {
+                _updateNameState.value = UiState.Error("User ID not found. Try logging in again.")
+                return@launch
+            }
+
             _updateNameState.value = UiState.Loading
-            val result = ProfileApiService.updateProfileName(newName)
+            val result = ProfileApiService.updateProfileName(currentUserId, newName)
             
             result.onSuccess { response ->
                 userSettings.setUserName(newName.trim())
@@ -159,7 +165,6 @@ class SettingsViewModel(
             userSettings.setUserId(null)
             userSettings.setFriendCode(null)
             userSettings.setUserName(null)
-            userSettings.clearJwtToken()
             userSettings.setAuthMode(AuthMode.UNKNOWN)
         }
     }

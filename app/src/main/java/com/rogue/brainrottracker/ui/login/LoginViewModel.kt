@@ -121,7 +121,6 @@ class LoginViewModel(
                         }
 
                     userSettings.setUserId(userId)
-                    authResponse?.jwtToken?.let { userSettings.setJwtToken(it) }
                     authResponse?.user?.friendCode?.let { userSettings.setFriendCode(it) }
                     authResponse?.user?.name?.let { userSettings.setUserName(it) }
                     userSettings.setAuthMode(AuthMode.LOGGED_IN)
@@ -169,7 +168,6 @@ data class AuthUserInfo(
 @Serializable
 data class AuthResponse(
     val message: String,
-    val jwtToken: String? = null,
     val user: AuthUserInfo,
 )
 

@@ -1,4 +1,4 @@
-package com.rogue.brainrottracker.data.preferences
+﻿package com.rogue.brainrottracker.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -35,7 +35,6 @@ class UserSettings(private val context: Context) {
         private val BREATHE_SCREEN_ENABLED_KEY = booleanPreferencesKey("breathe_screen_enabled")
         private val BREATHE_INTERVAL_REELS_KEY = intPreferencesKey("breathe_interval_reels")
         private val GRAYSCALE_RAMP_ENABLED_KEY = booleanPreferencesKey("grayscale_ramp_enabled")
-        private val JWT_TOKEN_KEY = stringPreferencesKey("jwt_token")
     }
 
     suspend fun setAuthMode(mode: AuthMode) {
@@ -149,19 +148,6 @@ class UserSettings(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[GRAYSCALE_RAMP_ENABLED_KEY] = enabled }
     }
 
-    suspend fun setJwtToken(token: String?) {
-        context.dataStore.edit { prefs ->
-            if (token != null) {
-                prefs[JWT_TOKEN_KEY] = token
-            } else {
-                prefs.remove(JWT_TOKEN_KEY)
-            }
-        }
-    }
-
-    /** Convenience alias — clears the stored JWT (e.g. on logout). */
-    suspend fun clearJwtToken() = setJwtToken(null)
-
     val authMode: Flow<AuthMode> = context.dataStore.data.map { prefs ->
         val stored = prefs[AUTH_MODE_KEY]
         try {
@@ -243,9 +229,5 @@ class UserSettings(private val context: Context) {
 
     val grayscaleRampEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[GRAYSCALE_RAMP_ENABLED_KEY] ?: false
-    }
-
-    val jwtToken: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[JWT_TOKEN_KEY]
     }
 }
