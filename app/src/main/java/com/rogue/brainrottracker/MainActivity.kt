@@ -1,4 +1,4 @@
-package com.rogue.brainrottracker
+﻿package com.rogue.brainrottracker
 
 import android.os.Bundle
 import android.util.Log
