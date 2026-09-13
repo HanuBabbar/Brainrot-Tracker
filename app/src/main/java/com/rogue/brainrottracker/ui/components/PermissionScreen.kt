@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun PermissionScreen(
@@ -37,11 +39,12 @@ fun PermissionScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .padding(horizontal = 24.dp, vertical = 20.dp)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(12.dp))
+
             // Header Icon
             Surface(
                 shape = CircleShape,
@@ -51,14 +54,14 @@ fun PermissionScreen(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Security,
-                        contentDescription = "Accessibility",
+                        contentDescription = "Accessibility & Privacy",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(36.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Prominent Title
             Text(
@@ -78,7 +81,7 @@ fun PermissionScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // What We Access Section
             Card(
@@ -90,7 +93,7 @@ fun PermissionScreen(
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
                         text = "Why We Use the AccessibilityService API:",
@@ -102,13 +105,13 @@ fun PermissionScreen(
                     DisclosureFeatureItem(
                         icon = Icons.Default.Visibility,
                         title = "Foreground App Detection",
-                        description = "Detects when supported short-form video apps (Instagram, YouTube Shorts, TikTok) are opened."
+                        description = "Detects when supported short-form video apps (Instagram, YouTube Shorts, TikTok) are active in the foreground."
                     )
 
                     DisclosureFeatureItem(
                         icon = Icons.Default.Timer,
                         title = "Scroll & Time Tracking",
-                        description = "Monitors vertical scroll and swipe interactions inside these apps to measure active viewing time and reel counts."
+                        description = "Monitors vertical scroll interactions inside these specific apps to measure active viewing time and reel counts."
                     )
 
                     DisclosureFeatureItem(
@@ -119,7 +122,45 @@ fun PermissionScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Data Handling & Privacy Policy Statement
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Privacy",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Data Collection & Privacy",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    Text(
+                        text = "â€¢ We do NOT collect, read, or store keystrokes, messages, passwords, or banking information.\nâ€¢ No interaction data is ever sold or shared with third-party advertisers.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Two-Button Consent Options (Google Play Mandatory Requirement)
             Column(
@@ -161,7 +202,7 @@ fun PermissionScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "You can change or revoke this permission at any time in Android Settings > Accessibility.",
@@ -170,6 +211,8 @@ fun PermissionScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

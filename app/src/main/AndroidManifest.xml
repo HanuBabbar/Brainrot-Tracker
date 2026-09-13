@@ -37,7 +37,8 @@
             android:name=".ui.intervention.BreatheActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
             android:theme="@style/Theme.BrainrotTracker" />
 
         <service

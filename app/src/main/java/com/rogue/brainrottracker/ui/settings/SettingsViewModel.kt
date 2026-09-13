@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.ui.settings
+package com.rogue.brainrottracker.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -63,7 +63,7 @@ class SettingsViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 15)
 
     val breatheScreenEnabled: StateFlow<Boolean> = userSettings.breatheScreenEnabled
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val breatheIntervalReels: StateFlow<Int> = userSettings.breatheIntervalReels
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 20)

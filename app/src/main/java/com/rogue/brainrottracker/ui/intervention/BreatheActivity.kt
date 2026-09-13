@@ -2,7 +2,9 @@ package com.rogue.brainrottracker.ui.intervention
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.addCallback
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -36,6 +38,10 @@ class BreatheActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val userSettings = UserSettings(this)
 
+        onBackPressedDispatcher.addCallback(this) {
+            finishAndRemoveTask()
+        }
+
         setContent {
             val themeMode by userSettings.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
             val isDark = when (themeMode) {
@@ -44,7 +50,10 @@ class BreatheActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
             BrainrotTrackerTheme(darkTheme = isDark) {
-                BreatheScreen(onDone = { finish() })
+                BackHandler {
+                    finishAndRemoveTask()
+                }
+                BreatheScreen(onDone = { finishAndRemoveTask() })
             }
         }
     }

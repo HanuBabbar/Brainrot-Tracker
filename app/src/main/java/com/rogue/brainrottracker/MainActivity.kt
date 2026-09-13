@@ -135,6 +135,7 @@ fun AppRoot(
         )
     }
     var previousScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
+    var hasDismissedDisclosure by remember { mutableStateOf(false) }
 
     // Request Notification Permission for Android 13+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(

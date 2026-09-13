@@ -1,4 +1,4 @@
-﻿package com.rogue.brainrottracker.data.preferences
+package com.rogue.brainrottracker.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -220,7 +220,7 @@ class UserSettings(private val context: Context) {
     }
 
     val breatheScreenEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[BREATHE_SCREEN_ENABLED_KEY] ?: true
+        prefs[BREATHE_SCREEN_ENABLED_KEY] ?: false
     }
 
     val breatheIntervalReels: Flow<Int> = context.dataStore.data.map { prefs ->
