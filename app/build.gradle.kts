@@ -1,4 +1,4 @@
-﻿import java.util.Properties
+import java.util.Properties
 import java.io.FileInputStream
 
 plugins {
@@ -37,8 +37,8 @@ android {
         applicationId = "com.rogue.brainrottracker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 16
-        versionName = "0.98"
+        versionCode = 17
+        versionName = "0.99"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
