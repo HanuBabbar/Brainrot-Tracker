@@ -13,6 +13,13 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+data class DayTotal(
+    val weekday: String,
+    val dayOfMonth: String,
+    val total: Int,
+    val isToday: Boolean,
+)
+
 class DashboardViewModel(
     repository: UsageRepository,
     userSettings: UserSettings
@@ -57,9 +64,39 @@ class DashboardViewModel(
         !breached
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    /** Per-day totals for the last 7 calendar days (oldest→newest), zero-filled for missing days. */
+    val weeklyDailyTotals: StateFlow<List<DayTotal>> = repository.getWeekly()
+        .map { list ->
+            val byDate = list.groupBy { it.date }.mapValues { (_, e) -> e.sumOf { it.count } }
+            val labelFmt = SimpleDateFormat("EEE", Locale.getDefault())
+            val dayFmt = SimpleDateFormat("d", Locale.getDefault())
+            (6 downTo 0).map { back ->
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.DAY_OF_YEAR, -back)
+                val key = fmt.format(cal.time)
+                DayTotal(
+                    weekday = labelFmt.format(cal.time),
+                    dayOfMonth = dayFmt.format(cal.time),
+                    total = byDate[key] ?: 0,
+                    isToday = back == 0,
+                )
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val userName: StateFlow<String?> = userSettings.userName
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val friendCode: StateFlow<String?> = userSettings.friendCode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /** Minutes elapsed in the current (still-warm) scrolling session, or null if idle. */
+    val activeSessionMinutes: StateFlow<Int?> = repository.observeActiveSessionMinutes()
+        .map { session ->
+            session?.let {
+                val durationMs = (it.endTime ?: it.startTime) - it.startTime
+                (durationMs / 60_000L).toInt()
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 }

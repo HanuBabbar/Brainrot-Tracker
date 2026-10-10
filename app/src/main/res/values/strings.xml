@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">Brainrot Tracker</string>
-    <string name="accessibility_service_description">Tracks your scrolling in short-form video apps to help you manage screen time.</string>
+    <string name="accessibility_service_description">Brainrot Tracker uses the AccessibilityService API solely to detect when short-form video apps (Instagram, YouTube, TikTok) are active in the foreground and track scrolling duration to help you manage screen time. No personal data, keystrokes, or messages are ever collected or stored.</string>
 </resources>

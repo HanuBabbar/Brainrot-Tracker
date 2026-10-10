@@ -1,5 +1,7 @@
-﻿package com.rogue.brainrottracker.data.repository
+package com.rogue.brainrottracker.data.repository
 
+import com.rogue.brainrottracker.data.local.SessionDao
+import com.rogue.brainrottracker.data.local.SessionEntity
 import com.rogue.brainrottracker.data.local.UsageDao
 import com.rogue.brainrottracker.data.local.UsageEntity
 import com.rogue.brainrottracker.data.preferences.UserSettings
@@ -8,20 +10,34 @@ import com.rogue.brainrottracker.data.remote.SyncRequest
 import com.rogue.brainrottracker.util.NotificationHelper
 import androidx.glance.appwidget.updateAll
 import com.rogue.brainrottracker.widget.BrainrotWidget
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+data class IncrementResult(
+    val shouldBlock: Boolean,
+    val totalCountToday: Int,
+    val dailyLimit: Int,
+)
+
 class UsageRepository(
     private val usageDao: UsageDao,
     private val userSettings: UserSettings,
-    private val notificationHelper: NotificationHelper
+    private val notificationHelper: NotificationHelper,
+    private val sessionDao: SessionDao,
 ) {
+
+    @Volatile
+    private var lastSyncAttemptMs: Long = 0L
+    private val minSyncIntervalMs = 30_000L
+    private val sessionIdleGapMs = 2 * 60 * 1000L
 
     private fun getTodayDate(): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -33,7 +49,7 @@ class UsageRepository(
         return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
     }
 
-    suspend fun incrementUsage(platform: String): Boolean {
+    suspend fun incrementUsage(platform: String): IncrementResult {
         val date = getTodayDate()
         val existingUsage = usageDao.getUsageByDate(date, platform)
 
@@ -48,22 +64,59 @@ class UsageRepository(
             )
             usageDao.upsertUsage(newUsage)
         }
-        
+
         // Update widgets whenever data changes
         updateWidgets()
 
         checkLimitAndNotify()
 
-        // Sync if logged in
+        // Sync if logged in, throttled so a scroll burst doesn't fire a network call per swipe
         if (userSettings.userId.first() != null) {
-            syncData()
+            val now = System.currentTimeMillis()
+            if (now - lastSyncAttemptMs >= minSyncIntervalMs) {
+                lastSyncAttemptMs = now
+                syncData()
+            }
         }
 
         val strictModeEnabled = userSettings.strictModeEnabled.first()
         val limit = userSettings.dailyLimit.first()
         val totalCount = usageDao.getTotalCountForDateSync(date) ?: 0
-        return strictModeEnabled && totalCount >= limit
+        return IncrementResult(
+            shouldBlock = strictModeEnabled && totalCount >= limit,
+            totalCountToday = totalCount,
+            dailyLimit = limit,
+        )
     }
+
+    /**
+     * Extends the most recent session if it's the same platform and within the idle gap,
+     * otherwise closes it out (implicitly, by starting a fresh row) and opens a new one.
+     * Returns true if a brand-new session was started (i.e. the prior one just ended).
+     */
+    suspend fun trackSwipeForSession(platform: String): Boolean {
+        val now = System.currentTimeMillis()
+        val latest = sessionDao.getLatestSessionOnce()
+        val lastActivity = latest?.endTime ?: latest?.startTime
+
+        return if (latest != null && latest.platform == platform && lastActivity != null && now - lastActivity <= sessionIdleGapMs) {
+            sessionDao.updateSession(latest.copy(endTime = now, swipeCount = latest.swipeCount + 1))
+            false
+        } else {
+            sessionDao.insertSession(SessionEntity(platform = platform, startTime = now, endTime = now, swipeCount = 1))
+            latest != null
+        }
+    }
+
+    /** Active session age in minutes if the latest session is still "warm" (within the idle gap), else null. */
+    fun observeActiveSessionMinutes(): Flow<SessionEntity?> = sessionDao.observeLatestSession()
+        .map { session ->
+            val lastActivity = session?.endTime ?: session?.startTime
+            if (session != null && lastActivity != null && System.currentTimeMillis() - lastActivity <= sessionIdleGapMs) session else null
+        }
+
+    fun getSessionsForDate(dateMillisStart: Long, dateMillisEnd: Long): Flow<List<SessionEntity>> =
+        sessionDao.getSessionsForDay(dateMillisStart, dateMillisEnd)
 
     private suspend fun checkLimitAndNotify() {
         val date = getTodayDate()
@@ -101,6 +154,34 @@ class UsageRepository(
             android.util.Log.d("UsageRepository", "Sync successful: ${response.status}")
         } catch (e: Exception) {
             android.util.Log.e("UsageRepository", "Sync failed", e)
+        }
+    }
+
+    suspend fun pullData() {
+        val userId = userSettings.userId.first() ?: return
+
+        try {
+            val url = "${NetworkClient.BASE_URL}sync/pull?userId=$userId"
+            val response = NetworkClient.client.get(url)
+            val pullResponse = response.body<com.rogue.brainrottracker.data.remote.PullResponse>()
+
+            // Merge: for each cloud entry, only overwrite local if cloud count is higher
+            for (stat in pullResponse.stats) {
+                val local = usageDao.getUsageByDate(stat.date, stat.platform)
+                if (local == null || stat.count > local.count) {
+                    usageDao.upsertUsage(
+                        UsageEntity(
+                            id = local?.id ?: 0,
+                            date = stat.date,
+                            platform = stat.platform,
+                            count = stat.count
+                        )
+                    )
+                }
+            }
+            updateWidgets()
+        } catch (e: Exception) {
+            android.util.Log.e("UsageRepository", "Pull failed", e)
         }
     }
 

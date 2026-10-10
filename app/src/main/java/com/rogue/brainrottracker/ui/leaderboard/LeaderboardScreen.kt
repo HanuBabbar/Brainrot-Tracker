@@ -46,7 +46,7 @@ fun LeaderboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Leaderboard", fontWeight = FontWeight.Bold) },
+                title = { Text("Hall of Shame", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 )
@@ -193,7 +193,7 @@ private fun LeaderboardList(entries: List<LeaderboardEntry>) {
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        itemsIndexed(entries, key = { _, e -> e.userId }) { _, entry ->
+        itemsIndexed(entries, key = { _, e -> e.userId ?: "${e.rank}_${e.name}" }) { _, entry ->
             LeaderboardRow(entry = entry)
         }
     }
